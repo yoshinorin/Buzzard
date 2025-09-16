@@ -26,7 +26,11 @@ The server will start on `http://localhost:5134` by default.
 ### Test
 
 ```bash
+# simple
 dotnet test
+
+# detailed
+dotnet test --logger "console;verbosity=detailed"
 ```
 
 ### Configuration
