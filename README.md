@@ -23,6 +23,12 @@ dotnet run
 
 The server will start on `http://localhost:5134` by default.
 
+### Test
+
+```bash
+dotnet test
+```
+
 ### Configuration
 
 Edit `src/appsettings.json` to configure:
