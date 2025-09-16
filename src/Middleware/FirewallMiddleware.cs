@@ -1,4 +1,5 @@
 using System.Net;
+using Buzzard.Extensions;
 
 namespace Buzzard.Middleware;
 
@@ -20,7 +21,7 @@ public class FirewallMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var clientIp = GetClientIpAddress(context);
+        var clientIp = context.GetClientIpAddress();
         var path = context.Request.Path.Value ?? "";
         var userAgent = context.Request.Headers.UserAgent.ToString();
         var method = context.Request.Method;
@@ -38,18 +39,4 @@ public class FirewallMiddleware
         await _next(context);
     }
 
-    private static IPAddress GetClientIpAddress(HttpContext context)
-    {
-        // Try X-Forwarded-For header first (for proxy scenarios)
-        var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(forwardedFor))
-        {
-            var firstIp = forwardedFor.Split(',')[0].Trim();
-            if (IPAddress.TryParse(firstIp, out var parsedIp))
-                return parsedIp;
-        }
-
-        // Fallback to connection remote IP
-        return context.Connection.RemoteIpAddress ?? IPAddress.Loopback;
-    }
 }
