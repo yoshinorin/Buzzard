@@ -1,5 +1,7 @@
 # Buzzard
 
+[![CI](https://github.com/yoshinorin/Buzzard/actions/workflows/ci.yml/badge.svg)](https://github.com/yoshinorin/Buzzard/actions/workflows/ci.yml)
+
 A firewall-enabled reverse proxy server built with .NET Kestrel and YARP (Yet Another Reverse Proxy).
 
 ## Quick Start
