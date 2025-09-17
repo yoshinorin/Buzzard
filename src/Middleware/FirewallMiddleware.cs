@@ -26,11 +26,8 @@ public class FirewallMiddleware
         var userAgent = context.Request.Headers.UserAgent.ToString();
         var method = context.Request.Method;
 
-        _logger.LogDebug("Request: {Method} {Path} from {ClientIp} - UserAgent: {UserAgent}", method, path, clientIp, userAgent);
-
         if (_blockedPaths.Any(blockedPath => path.StartsWith(blockedPath, StringComparison.OrdinalIgnoreCase)))
         {
-            _logger.LogWarning("Blocked request to path: {Path} from IP: {ClientIp} - UserAgent: {UserAgent}", path, clientIp, userAgent);
             context.Response.StatusCode = 403;
             await context.Response.WriteAsync("Forbidden");
             return;
