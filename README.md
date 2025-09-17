@@ -63,7 +63,18 @@ Edit `src/appsettings.json` to configure:
 
 ```json
 "Firewall": {
-  "BlockedPaths": ["/admin", "/internal"]
+  "Path": {
+    "Allow": {
+      "Contains": ["/health", "/status"],
+      "StartsWith": ["/api/public"],
+      "EndsWith": [".css", ".js", ".png", ".ico"]
+    },
+    "Deny": {
+      "Contains": ["/admin", "/config", "/.env"],
+      "StartsWith": ["/private/", "/internal/"],
+      "EndsWith": [".bak", ".tmp", ".log"]
+    }
+  }
 }
 ```
 

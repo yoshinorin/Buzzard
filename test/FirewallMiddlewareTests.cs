@@ -1,5 +1,6 @@
 using System.Net;
 using Buzzard.Middleware;
+using Buzzard.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -17,10 +18,11 @@ public class FirewallMiddlewareTests
         _mockNext = new Mock<RequestDelegate>();
         _mockLogger = new Mock<ILogger<FirewallMiddleware>>();
 
+        var config = new FirewallConfig();
         _middleware = new FirewallMiddleware(
             _mockNext.Object,
             _mockLogger.Object,
-            new List<string>());
+            config);
     }
 
     [Fact]
@@ -35,13 +37,15 @@ public class FirewallMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_BlockedPath_Returns403()
+    public async Task InvokeAsync_PathDenyStartsWith_Returns403_Legacy()
     {
-        var blockedPaths = new List<string> { "/admin", "/api/internal" };
+        var config = new FirewallConfig();
+        config.Path.Deny.StartsWith.AddRange(["/admin", "/api/internal"]);
+
         var middleware = new FirewallMiddleware(
             _mockNext.Object,
             _mockLogger.Object,
-            blockedPaths);
+            config);
         var context = CreateHttpContext("/admin/users");
 
         await middleware.InvokeAsync(context);
@@ -51,13 +55,14 @@ public class FirewallMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_AllowedPath_CallsNext()
+    public async Task InvokeAsync_AllowedPath_CallsNext_Default()
     {
-        var blockedPaths = new List<string> { "/admin", "/api/internal" };
+        var config = new FirewallConfig();
+
         var middleware = new FirewallMiddleware(
             _mockNext.Object,
             _mockLogger.Object,
-            blockedPaths);
+            config);
         var context = CreateHttpContext("/api/public");
 
         await middleware.InvokeAsync(context);
@@ -71,19 +76,166 @@ public class FirewallMiddlewareTests
     [InlineData("/admin/users", "/admin")]
     [InlineData("/ADMIN/Users", "/admin")]
     [InlineData("/api/internal/test", "/api/internal")]
-    public async Task InvokeAsync_BlockedPathMatching_IsCaseInsensitive(string requestPath, string blockedPath)
+    public async Task InvokeAsync_PathDenyStartsWith_IsCaseInsensitive(string requestPath, string denyPath)
     {
-        var blockedPaths = new List<string> { blockedPath };
+        var config = new FirewallConfig();
+        config.Path.Deny.StartsWith.Add(denyPath);
+
         var middleware = new FirewallMiddleware(
             _mockNext.Object,
             _mockLogger.Object,
-            blockedPaths);
+            config);
         var context = CreateHttpContext(requestPath);
 
         await middleware.InvokeAsync(context);
 
         _mockNext.Verify(x => x(context), Times.Never);
         Assert.Equal(403, context.Response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/health")]
+    [InlineData("/status")]
+    [InlineData("/api/health")]
+    public async Task InvokeAsync_PathAllowContains_CallsNext(string requestPath)
+    {
+        var config = new FirewallConfig();
+        config.Path.Allow.Contains.AddRange(["/health", "/status"]);
+        config.Path.Deny.Contains.AddRange(["/admin"]);
+
+        var middleware = new FirewallMiddleware(
+            _mockNext.Object,
+            _mockLogger.Object,
+            config);
+        var context = CreateHttpContext(requestPath);
+
+        await middleware.InvokeAsync(context);
+
+        _mockNext.Verify(x => x(context), Times.Once);
+        Assert.Equal(200, context.Response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/admin")]
+    [InlineData("/config")]
+    [InlineData("/api/admin")]
+    public async Task InvokeAsync_PathDenyContains_Returns403(string requestPath)
+    {
+        var config = new FirewallConfig();
+        config.Path.Deny.Contains.AddRange(["/admin", "/config"]);
+
+        var middleware = new FirewallMiddleware(
+            _mockNext.Object,
+            _mockLogger.Object,
+            config);
+        var context = CreateHttpContext(requestPath);
+
+        await middleware.InvokeAsync(context);
+
+        _mockNext.Verify(x => x(context), Times.Never);
+        Assert.Equal(403, context.Response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/api/public/users")]
+    [InlineData("/api/public/data")]
+    public async Task InvokeAsync_PathAllowStartsWith_CallsNext(string requestPath)
+    {
+        var config = new FirewallConfig();
+        config.Path.Allow.StartsWith.AddRange(["/api/public"]);
+        config.Path.Deny.StartsWith.AddRange(["/api/private"]);
+
+        var middleware = new FirewallMiddleware(
+            _mockNext.Object,
+            _mockLogger.Object,
+            config);
+        var context = CreateHttpContext(requestPath);
+
+        await middleware.InvokeAsync(context);
+
+        _mockNext.Verify(x => x(context), Times.Once);
+        Assert.Equal(200, context.Response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/api/private/users")]
+    [InlineData("/private/data")]
+    public async Task InvokeAsync_PathDenyStartsWith_Returns403(string requestPath)
+    {
+        var config = new FirewallConfig();
+        config.Path.Deny.StartsWith.AddRange(["/api/private", "/private/"]);
+
+        var middleware = new FirewallMiddleware(
+            _mockNext.Object,
+            _mockLogger.Object,
+            config);
+        var context = CreateHttpContext(requestPath);
+
+        await middleware.InvokeAsync(context);
+
+        _mockNext.Verify(x => x(context), Times.Never);
+        Assert.Equal(403, context.Response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/styles.css")]
+    [InlineData("/app.js")]
+    [InlineData("/logo.png")]
+    public async Task InvokeAsync_PathAllowEndsWith_CallsNext(string requestPath)
+    {
+        var config = new FirewallConfig();
+        config.Path.Allow.EndsWith.AddRange([".css", ".js", ".png"]);
+        config.Path.Deny.EndsWith.AddRange([".bak"]);
+
+        var middleware = new FirewallMiddleware(
+            _mockNext.Object,
+            _mockLogger.Object,
+            config);
+        var context = CreateHttpContext(requestPath);
+
+        await middleware.InvokeAsync(context);
+
+        _mockNext.Verify(x => x(context), Times.Once);
+        Assert.Equal(200, context.Response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/config.bak")]
+    [InlineData("/data.tmp")]
+    public async Task InvokeAsync_PathDenyEndsWith_Returns403(string requestPath)
+    {
+        var config = new FirewallConfig();
+        config.Path.Deny.EndsWith.AddRange([".bak", ".tmp"]);
+
+        var middleware = new FirewallMiddleware(
+            _mockNext.Object,
+            _mockLogger.Object,
+            config);
+        var context = CreateHttpContext(requestPath);
+
+        await middleware.InvokeAsync(context);
+
+        _mockNext.Verify(x => x(context), Times.Never);
+        Assert.Equal(403, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_AllowOverridesDeny_CallsNext()
+    {
+        var config = new FirewallConfig();
+        config.Path.Allow.Contains.Add("/admin/health");
+        config.Path.Deny.StartsWith.Add("/admin");
+
+        var middleware = new FirewallMiddleware(
+            _mockNext.Object,
+            _mockLogger.Object,
+            config);
+        var context = CreateHttpContext("/admin/health");
+
+        await middleware.InvokeAsync(context);
+
+        _mockNext.Verify(x => x(context), Times.Once);
+        Assert.Equal(200, context.Response.StatusCode);
     }
 
     private static DefaultHttpContext CreateHttpContext(string path = "/")
