@@ -11,4 +11,8 @@
     <PackageReference Include="ZLogger" Version="2.5.10" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Remove="appsettings.Development.json" />
+  </ItemGroup>
+
 </Project>
