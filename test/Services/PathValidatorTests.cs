@@ -12,7 +12,7 @@ public class PathValidatorTests
     public void IsPathAllowed_Contains_ReturnsTrue(string path)
     {
         var config = new PathConfig();
-        config.Allow.Contains.AddRange(["/health", "/status"]);
+        config.Allow.Contains.UnionWith(["/health", "/status"]);
         var validator = new PathValidator(config);
 
         Assert.True(validator.IsPathAllowed(path));
@@ -37,7 +37,7 @@ public class PathValidatorTests
     public void IsPathAllowed_EndsWith_ReturnsTrue(string path)
     {
         var config = new PathConfig();
-        config.Allow.EndsWith.AddRange([".css", ".js", ".png"]);
+        config.Allow.EndsWith.UnionWith([".css", ".js", ".png"]);
         var validator = new PathValidator(config);
 
         Assert.True(validator.IsPathAllowed(path));
@@ -50,7 +50,7 @@ public class PathValidatorTests
     public void IsPathDenied_Contains_ReturnsTrue(string path)
     {
         var config = new PathConfig();
-        config.Deny.Contains.AddRange(["/admin", "/config"]);
+        config.Deny.Contains.UnionWith(["/admin", "/config"]);
         var validator = new PathValidator(config);
 
         Assert.True(validator.IsPathDenied(path));
@@ -62,7 +62,7 @@ public class PathValidatorTests
     public void IsPathDenied_StartsWith_ReturnsTrue(string path)
     {
         var config = new PathConfig();
-        config.Deny.StartsWith.AddRange(["/api/private", "/private/"]);
+        config.Deny.StartsWith.UnionWith(["/api/private", "/private/"]);
         var validator = new PathValidator(config);
 
         var result = validator.IsPathDenied(path);
@@ -76,7 +76,7 @@ public class PathValidatorTests
     public void IsPathDenied_EndsWith_ReturnsTrue(string path)
     {
         var config = new PathConfig();
-        config.Deny.EndsWith.AddRange([".bak", ".tmp"]);
+        config.Deny.EndsWith.UnionWith([".bak", ".tmp"]);
         var validator = new PathValidator(config);
 
         var result = validator.IsPathDenied(path);
@@ -138,9 +138,9 @@ public class PathValidatorTests
     {
         var pathRules = new PathRules();
 
-        pathRules.Contains = new List<string> { "ADMIN", "Api", "USER" };
+        pathRules.Contains = new HashSet<string> { "ADMIN", "Api", "USER" };
 
-        Assert.Equal(new List<string> { "admin", "api", "user" }, pathRules.Contains);
+        Assert.Equal(new HashSet<string> { "admin", "api", "user" }, pathRules.Contains);
     }
 
     [Fact]
@@ -148,9 +148,9 @@ public class PathValidatorTests
     {
         var pathRules = new PathRules();
 
-        pathRules.StartsWith = new List<string> { "/API/", "/Admin/" };
+        pathRules.StartsWith = new HashSet<string> { "/API/", "/Admin/" };
 
-        Assert.Equal(new List<string> { "/api/", "/admin/" }, pathRules.StartsWith);
+        Assert.Equal(new HashSet<string> { "/api/", "/admin/" }, pathRules.StartsWith);
     }
 
     [Fact]
@@ -158,9 +158,9 @@ public class PathValidatorTests
     {
         var pathRules = new PathRules();
 
-        pathRules.EndsWith = new List<string> { ".CSS", ".JS", ".PNG" };
+        pathRules.EndsWith = new HashSet<string> { ".CSS", ".JS", ".PNG" };
 
-        Assert.Equal(new List<string> { ".css", ".js", ".png" }, pathRules.EndsWith);
+        Assert.Equal(new HashSet<string> { ".css", ".js", ".png" }, pathRules.EndsWith);
     }
 
     [Fact]

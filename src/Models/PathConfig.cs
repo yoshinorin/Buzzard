@@ -8,25 +8,25 @@ public class PathConfig
 
 public class PathRules
 {
-    private List<string> _contains = new();
-    private List<string> _startsWith = new();
-    private List<string> _endsWith = new();
+    private HashSet<string> _contains = new();
+    private HashSet<string> _startsWith = new();
+    private HashSet<string> _endsWith = new();
 
-    public List<string> Contains
+    public HashSet<string> Contains
     {
         get => _contains;
-        set => _contains = value?.Select(p => p.ToLowerInvariant()).ToList() ?? new();
+        set => _contains = value?.Select(p => p.ToLowerInvariant()).ToHashSet() ?? new();
     }
 
-    public List<string> StartsWith
+    public HashSet<string> StartsWith
     {
         get => _startsWith;
-        set => _startsWith = value?.Select(p => p.ToLowerInvariant()).ToList() ?? new();
+        set => _startsWith = value?.Select(p => p.ToLowerInvariant()).ToHashSet() ?? new();
     }
 
-    public List<string> EndsWith
+    public HashSet<string> EndsWith
     {
         get => _endsWith;
-        set => _endsWith = value?.Select(p => p.ToLowerInvariant()).ToList() ?? new();
+        set => _endsWith = value?.Select(p => p.ToLowerInvariant()).ToHashSet() ?? new();
     }
 }
