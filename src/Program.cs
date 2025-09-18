@@ -32,7 +32,7 @@ builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSecti
 builder.Services.AddFirewall(builder.Configuration);
 
 var app = builder.Build();
-app.UseMiddleware<FirewallMiddleware>(app.Services.GetRequiredService<FirewallConfig>());
+app.UseMiddleware<FirewallMiddleware>();
 app.MapReverseProxy();
 
 app.Run();

@@ -1,4 +1,5 @@
 using Buzzard.Models;
+using Buzzard.Services;
 
 namespace Buzzard.Extensions;
 
@@ -9,6 +10,7 @@ public static class ServiceCollectionExtensions
         var firewallConfig = configuration.GetSection("Firewall").Get<FirewallConfig>() ?? new FirewallConfig();
 
         services.AddSingleton(firewallConfig);
+        services.AddSingleton<IPathValidator, PathValidator>();
 
         return services;
     }
