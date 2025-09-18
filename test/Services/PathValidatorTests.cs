@@ -132,4 +132,48 @@ public class PathValidatorTests
 
         Assert.True(validator.IsPathDenied(path));
     }
+
+    [Fact]
+    public void PathRules_Contains_AutomaticallyConvertsToLowerCase()
+    {
+        var pathRules = new PathRules();
+
+        pathRules.Contains = new List<string> { "ADMIN", "Api", "USER" };
+
+        Assert.Equal(new List<string> { "admin", "api", "user" }, pathRules.Contains);
+    }
+
+    [Fact]
+    public void PathRules_StartsWith_AutomaticallyConvertsToLowerCase()
+    {
+        var pathRules = new PathRules();
+
+        pathRules.StartsWith = new List<string> { "/API/", "/Admin/" };
+
+        Assert.Equal(new List<string> { "/api/", "/admin/" }, pathRules.StartsWith);
+    }
+
+    [Fact]
+    public void PathRules_EndsWith_AutomaticallyConvertsToLowerCase()
+    {
+        var pathRules = new PathRules();
+
+        pathRules.EndsWith = new List<string> { ".CSS", ".JS", ".PNG" };
+
+        Assert.Equal(new List<string> { ".css", ".js", ".png" }, pathRules.EndsWith);
+    }
+
+    [Fact]
+    public void PathRules_SetNull_CreatesEmptyList()
+    {
+        var pathRules = new PathRules();
+
+        pathRules.Contains = null;
+        pathRules.StartsWith = null;
+        pathRules.EndsWith = null;
+
+        Assert.Empty(pathRules.Contains);
+        Assert.Empty(pathRules.StartsWith);
+        Assert.Empty(pathRules.EndsWith);
+    }
 }
