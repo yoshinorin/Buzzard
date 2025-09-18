@@ -35,3 +35,4 @@ appsettings.Local.json
 # Environment-specific secrets
 *.secrets.json
 secrets/
+.claude
