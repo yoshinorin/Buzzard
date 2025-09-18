@@ -11,6 +11,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(firewallConfig);
         services.AddSingleton<IPathValidator, PathValidator>();
+        services.AddSingleton<IUserAgentValidator, UserAgentValidator>();
 
         return services;
     }
