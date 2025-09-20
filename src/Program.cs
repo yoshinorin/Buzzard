@@ -14,6 +14,7 @@ builder.Logging
         options.FilePathSelector = (timestamp, sequenceNumber) => $"logs/application_{timestamp.ToLocalTime():yyyy-MM-dd}_{sequenceNumber}.log";
         options.RollingInterval = RollingInterval.Day;
         options.RollingSizeKB = 1024;
+        options.UseJsonFormatter();
     })
     .AddZLoggerConsole(options =>
     {
