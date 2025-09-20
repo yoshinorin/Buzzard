@@ -30,7 +30,9 @@ public class FirewallMiddleware
         {
             _logger.LogError("Request blocked by Path: {request}", request);
             context.Response.StatusCode = 403;
+#if DEBUG
             await context.Response.WriteAsync("Forbidden");
+#endif
             return;
         }
 
@@ -38,7 +40,9 @@ public class FirewallMiddleware
         {
             _logger.LogError("Request blocked by UserAgent: {request}", request);
             context.Response.StatusCode = 403;
+#if DEBUG
             await context.Response.WriteAsync("Forbidden");
+#endif
             return;
         }
 
