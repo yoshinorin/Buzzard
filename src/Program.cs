@@ -1,7 +1,10 @@
+using System.Runtime.Serialization;
+using System.Text.Json;
 using Buzzard.Extensions;
 using Buzzard.Middleware;
 using Buzzard.Models;
 using ZLogger;
+using ZLogger.Formatters;
 using ZLogger.Providers;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,7 +17,18 @@ builder.Logging
         options.FilePathSelector = (timestamp, sequenceNumber) => $"logs/application_{timestamp.ToLocalTime():yyyy-MM-dd}_{sequenceNumber}.log";
         options.RollingInterval = RollingInterval.Day;
         options.RollingSizeKB = 1024;
-        options.UseJsonFormatter();
+        options.UseJsonFormatter(formatter =>
+        {
+            formatter.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+            formatter.JsonPropertyNames = JsonPropertyNames.Default with
+            {
+                Message = JsonEncodedText.Encode("message"),
+                Timestamp = JsonEncodedText.Encode("timestamp"),
+                LogLevel = JsonEncodedText.Encode("logLevel"),
+                Category = JsonEncodedText.Encode("category"),
+                Exception = JsonEncodedText.Encode("exception")
+            };
+        });
     })
     .AddZLoggerConsole(options =>
     {
@@ -24,6 +38,15 @@ builder.Logging
             {
                 formatter.JsonSerializerOptions.WriteIndented = true;
             }
+            formatter.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+            formatter.JsonPropertyNames = JsonPropertyNames.Default with
+            {
+                Message = JsonEncodedText.Encode("message"),
+                Timestamp = JsonEncodedText.Encode("timestamp"),
+                LogLevel = JsonEncodedText.Encode("logLevel"),
+                Category = JsonEncodedText.Encode("category"),
+                Exception = JsonEncodedText.Encode("exception")
+            };
         });
     });
 
