@@ -46,6 +46,7 @@ public class FirewallMiddleware
             return;
         }
 
+        _logger.LogInformation("Request allowed: {request}", request);
         await _next(context);
     }
 }
