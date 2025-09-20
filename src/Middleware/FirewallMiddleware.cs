@@ -28,6 +28,7 @@ public class FirewallMiddleware
 
         if (_pathValidator.IsPathBlocked(request.Path))
         {
+            _logger.LogError("Request blocked by Path: {request}", request);
             context.Response.StatusCode = 403;
             await context.Response.WriteAsync("Forbidden");
             return;
@@ -35,6 +36,7 @@ public class FirewallMiddleware
 
         if (_userAgentValidator.IsUserAgentBlocked(request.UserAgent))
         {
+            _logger.LogError("Request blocked by UserAgent: {request}", request);
             context.Response.StatusCode = 403;
             await context.Response.WriteAsync("Forbidden");
             return;
