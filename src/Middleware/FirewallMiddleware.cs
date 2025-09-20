@@ -24,19 +24,16 @@ public class FirewallMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var clientIp = context.GetClientIpAddress();
-        var path = context.Request.Path.Value ?? "";
-        var userAgent = context.Request.Headers.UserAgent.ToString();
-        var method = context.Request.Method;
+        var request = context.Extract();
 
-        if (_pathValidator.IsPathBlocked(path))
+        if (_pathValidator.IsPathBlocked(request.Path))
         {
             context.Response.StatusCode = 403;
             await context.Response.WriteAsync("Forbidden");
             return;
         }
 
-        if (_userAgentValidator.IsUserAgentBlocked(userAgent))
+        if (_userAgentValidator.IsUserAgentBlocked(request.UserAgent))
         {
             context.Response.StatusCode = 403;
             await context.Response.WriteAsync("Forbidden");
