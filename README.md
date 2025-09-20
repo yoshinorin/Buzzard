@@ -74,6 +74,19 @@ Edit `src/appsettings.json` to configure:
       "StartsWith": ["/private/", "/internal/"],
       "EndsWith": [".bak", ".tmp", ".log"]
     }
+  },
+  "UserAgent": {
+    "Deny": {
+      "Contains": [
+        "bad"
+      ],
+      "StartsWith": [
+        "evil/"
+      ],
+      "EndsWith": [
+        "bot"
+      ]
+    }
   }
 }
 ```
