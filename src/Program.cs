@@ -9,7 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 // https://github.com/Cysharp/ZLogger
 builder.Logging
     .ClearProviders()
-    .AddZLoggerFile("logs/application.log") // Is this settings really needed?
     .AddZLoggerRollingFile(options =>
     {
         options.FilePathSelector = (timestamp, sequenceNumber) => $"logs/application_{timestamp.ToLocalTime():yyyy-MM-dd}_{sequenceNumber}.log";
