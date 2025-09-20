@@ -10,6 +10,8 @@ public static class ServiceCollectionExtensions
         var firewallConfig = configuration.GetSection("Firewall").Get<FirewallConfig>() ?? new FirewallConfig();
 
         services.AddSingleton(firewallConfig);
+        services.AddSingleton(firewallConfig.Path);
+        services.AddSingleton(firewallConfig.UserAgent);
         services.AddSingleton<IPathValidator, PathValidator>();
         services.AddSingleton<IUserAgentValidator, UserAgentValidator>();
 
