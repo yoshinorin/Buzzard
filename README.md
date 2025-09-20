@@ -21,7 +21,7 @@ cd src
 dotnet run
 ```
 
-The server will start on `http://localhost:5134` by default.
+The server will start on `http://localhost:5134`, `5135` and `5136`  by default.
 
 ### Test
 
