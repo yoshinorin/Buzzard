@@ -8,7 +8,7 @@ A firewall-enabled reverse proxy server built with .NET Kestrel and YARP (Yet An
 
 ### Prerequisites
 
-- .NET 9.0
+- .NET 10.0
 
 ### Build and Run
 
