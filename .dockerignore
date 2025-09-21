@@ -1,0 +1,14 @@
+test/
+**/bin/
+**/obj/
+.git/
+.claude/
+.github/
+.vs/
+*.log
+*.pdb
+README.md
+.gitignore
+.editorconfig
+appsettings.json
+appsettings.*.json

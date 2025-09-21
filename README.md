@@ -159,3 +159,12 @@ dotnet Buzzard.dll --urls "https://+:443;http://+:80"
     }
 }
 ```
+
+## Docker 
+
+### Build Image
+
+```
+# Exec on project root directory
+$ docker build --progress=plain -f docker/Dockerfile .
+```
