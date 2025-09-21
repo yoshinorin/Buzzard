@@ -168,3 +168,10 @@ dotnet Buzzard.dll --urls "https://+:443;http://+:80"
 # Exec on project root directory
 $ docker build --progress=plain -f docker/Dockerfile .
 ```
+
+### Release build example with docker
+
+```
+$ cd docker/examples
+$ docker compose up
+```

@@ -1,0 +1,20 @@
+services:
+  buzzard:
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+    environment:
+      ASPNETCORE_URLS: "http://+:5134;http://+:5135"
+      ASPNETCORE_ENVIRONMENT: Production
+    ports:
+      - "5134:5134"
+      - "5135:5135"
+    volumes:
+      - ./appsettings.json:/usr/opt/buzzard/appsettings.json
+      # NOTE: if you want to override `appsettins.json`. Please add `appsettings.Production.json`.
+      #- ./appsettings.Production.json:/usr/opt/buzzard/appsettings.Production.json
+      - ./logs:/usr/opt/buzzard/logs
+    # NOTE: only Linux
+    #network_mode: host
+networks:
+  buzzard:
