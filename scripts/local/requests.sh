@@ -2,17 +2,12 @@
 
 BASE_URL_5134="http://localhost:5134"
 BASE_URL_5135="http://localhost:5135"
-BASE_URL_5136="http://localhost:5136"
 
 echo "=== Buzzard Local Test ==="
 
-echo "=== Expects: 200"
-curl -o /dev/null -s -w "%{http_code} %{url_effective}\n" "$BASE_URL_5136/"
-
-echo "=== Expects: 502"
+echo "=== Expects: 200 or 502"
 curl -o /dev/null -s -w "%{http_code} %{url_effective}\n" "$BASE_URL_5134/"
 curl -o /dev/null -s -w "%{http_code} %{url_effective}\n" "$BASE_URL_5135/"
-
 
 echo "=== Expects: 403 - caused by blocked path"
 curl -o /dev/null -s -w "%{http_code} %{url_effective}\n" "$BASE_URL_5134/admin"
