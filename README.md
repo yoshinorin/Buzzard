@@ -91,6 +91,32 @@ Edit `src/appsettings.json` to configure:
 }
 ```
 
+#### OpenTelemetry Settings
+
+Buzzard supports OpenTelemetry for observability (tracing, metrics, and logs). Configure it in `appsettings.json`:
+
+```json
+"OpenTelemetry": {
+  "ServiceName": "Buzzard",
+  "ServiceNameSpace": "Buzzard",
+  "ServiceVersion": "1.0.0",
+  "Environment": "development",
+  "OtlpEndpoint": "http://localhost:4317",
+  "Headers": "Authorization=Basic {base64-encoded-credentials}"  // If you need
+}
+```
+
+Configuration options:
+
+- `ServiceName`: Name of your service (default: "buzzard")
+- `ServiceNameSpace`: Service namespace for grouping (default: "")
+- `ServiceVersion`: Version of your service (default: "1.0.0")
+- `Environment`: Environment identifier (default: "development")
+- `OtlpEndpoint`: OTLP collector endpoint URL (required - if not set, OpenTelemetry is disabled)
+- `Headers`: Additional headers for authentication (default: "")
+
+**Note**: If `OtlpEndpoint` is not configured, OpenTelemetry setup will be skipped and a message will be logged.
+
 ### Configuration Changes
 
 - Configuration changes require server restart
