@@ -13,9 +13,9 @@ public static class OtelExtentions
         var otelConfig = builder.Configuration.GetSection("OpenTelemetry");
         var otlpEndpoint = otelConfig["OtlpEndpoint"];
 
-        if (string.IsNullOrEmpty(otlpEndpoint))
+        if (!Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var validatedUri))
         {
-            Console.WriteLine("OpenTelemetry OtlpEndpoint is not configured. Skipping OpenTelemetry setup.");
+            Console.WriteLine($"Invalid OpenTelemetry OTLP endpoint URI: {otlpEndpoint}. Skipping OpenTelemetry setup.");
             return;
         }
 
@@ -38,7 +38,7 @@ public static class OtelExtentions
 
             options.AddOtlpExporter(otlpOptions =>
             {
-                otlpOptions.Endpoint = new Uri(otlpEndpoint);
+                otlpOptions.Endpoint = validatedUri;
                 otlpOptions.Headers = headers;
             });
         });
@@ -57,7 +57,7 @@ public static class OtelExtentions
         {
             providerBuilder.AddOtlpExporter(otlpOptions =>
             {
-                otlpOptions.Endpoint = new Uri(otlpEndpoint);
+                otlpOptions.Endpoint = validatedUri;
                 otlpOptions.Headers = headers;
             });
         })
@@ -68,7 +68,7 @@ public static class OtelExtentions
                 .AddHttpClientInstrumentation()
                 .AddOtlpExporter(otlpOptions =>
                 {
-                    otlpOptions.Endpoint = new Uri(otlpEndpoint);
+                    otlpOptions.Endpoint = validatedUri;
                     otlpOptions.Headers = headers;
                 });
         });
