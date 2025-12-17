@@ -24,6 +24,7 @@ public static class OtelExtentions
         var serviceVersion = otelConfig["ServiceVersion"] ?? "1.0.0";
         var environment = otelConfig["Environment"] ?? "development";
         var headers = otelConfig["Headers"] ?? "";
+        var ignoredPaths = otelConfig.GetSection("IgnoredPaths").Get<string[]>() ?? [];
 
         var instanceId = $"{Environment.MachineName}-{Guid.NewGuid()}";
 
@@ -64,7 +65,14 @@ public static class OtelExtentions
         .WithTracing(providerBuilder =>
         {
             providerBuilder
-                .AddAspNetCoreInstrumentation()
+                .AddAspNetCoreInstrumentation(options =>
+                {
+                    options.Filter = (httpContext) =>
+                    {
+                        var path = httpContext.Request.Path.Value;
+                        return !ignoredPaths.Any(ignoredPath => path?.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase) ?? false);
+                    };
+                })
                 .AddHttpClientInstrumentation()
                 .AddOtlpExporter(otlpOptions =>
                 {
