@@ -15,10 +15,10 @@
   <ItemGroup>
     <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
     <PackageReference Include="ZLogger" Version="2.5.10" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.9.0" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.9.0" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.14.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.14.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.14.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.14.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)' == 'Release'">
-    <Content Remove="appsettings.*.json"/>
+    <Content Remove="appsettings.*.json" />
   </ItemGroup>
 
 </Project>
