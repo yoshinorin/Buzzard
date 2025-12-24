@@ -20,6 +20,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/yoshinorin/docker-buzzard
+          # NOTE: replace tag name from `docker-vx.y.z` to `x.y.z`
+          tags: |
+            type=match,pattern=docker-v(.*),group=1
       -
         name: Login to GHCR
         uses: docker/login-action@v3
