@@ -18,7 +18,9 @@ A firewall-enabled reverse proxy server built with .NET Kestrel and YARP (Yet An
 
 ## Getting Started
 
-Exec release binary from [releases page](https://github.com/yoshinorin/Buzzard/releases).
+### Using Binary
+
+Download the release binary for your platform from the [releases page](https://github.com/yoshinorin/Buzzard/releases).
 
 ```bash
 # Using default configuration
@@ -29,6 +31,10 @@ Exec release binary from [releases page](https://github.com/yoshinorin/Buzzard/r
 ```
 
 The server will start and listen on the configured ports.
+
+### Using Docker
+
+Please see [GHCR](https://github.com/yoshinorin/Buzzard/pkgs/container/docker-buzzard).
 
 ## Configuration
 
