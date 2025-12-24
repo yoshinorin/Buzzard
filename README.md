@@ -1,6 +1,6 @@
 # Buzzard
 
-[![CI](https://github.com/yoshinorin/Buzzard/actions/workflows/ci.yml/badge.svg)](https://github.com/yoshinorin/Buzzard/actions/workflows/ci.yml)
+![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=Release) [![CI](https://github.com/yoshinorin/Buzzard/actions/workflows/ci.yml/badge.svg)](https://github.com/yoshinorin/Buzzard/actions/workflows/ci.yml)
 
 A firewall-enabled reverse proxy server built with .NET Kestrel and YARP (Yet Another Reverse Proxy).
 
@@ -8,9 +8,21 @@ A firewall-enabled reverse proxy server built with .NET Kestrel and YARP (Yet An
 
 - .NET 10.0
 
+## Supported Platforms
+
+| Platform | x64 | x86 | ARM64 |
+|----------|-----|-----|-------|
+| Windows  | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=x64) | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=x86) | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=arm64) |
+| Linux    | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=x64) | N/A | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=arm64) |
+| macOS    | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=x64) | N/A | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=arm64) |
+
+## Releases
+
+Please see [releases page](https://github.com/yoshinorin/Buzzard/releases).
+
 ## Getting Started
 
-Exec release binary.
+Exec release binary from [releases page](https://github.com/yoshinorin/Buzzard/releases).
 
 ```bash
 # Using default configuration

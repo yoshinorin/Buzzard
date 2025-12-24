@@ -7,7 +7,7 @@ RUN dotnet publish src/Buzzard.csproj -c Release -o out && \
     rm -f out/appsettings.json out/appsettings.*.json out/*.log out/*.pdb out/.editorconfig
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.1
 WORKDIR /usr/opt/buzzard
 
 COPY --from=build /usr/opt/buzzard/out .
