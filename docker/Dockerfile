@@ -2,8 +2,8 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /usr/opt/buzzard
 
 COPY ../ ./
-RUN dotnet restore src/Buzzard.csproj
-RUN dotnet publish src/Buzzard.csproj -c Release -o out && \
+RUN dotnet restore src/Buzzard.csproj && \
+    dotnet publish src/Buzzard.csproj -c Release --self-contained false -o out && \
     rm -f out/appsettings.json out/appsettings.*.json out/*.log out/*.pdb out/.editorconfig
 
 # Build runtime image
