@@ -12,13 +12,9 @@ A firewall-enabled reverse proxy server built with .NET Kestrel and YARP (Yet An
 
 | Platform | x64 | x86 | ARM64 |
 |----------|-----|-----|-------|
-| Windows  | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=x64) | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=x86) | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=arm64) |
-| Linux    | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=x64) | N/A | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=arm64) |
-| macOS    | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=x64) | N/A | ![](https://img.shields.io/github/v/release/yoshinorin/Buzzard?sort=semver&style=flat&label=arm64) |
-
-## Releases
-
-Please see [releases page](https://github.com/yoshinorin/Buzzard/releases).
+| Windows  | ✓   | ✓   | ✓     |
+| Linux    | ✓   |     | ✓     |
+| macOS    | ✓   |     | ✓     |
 
 ## Getting Started
 
