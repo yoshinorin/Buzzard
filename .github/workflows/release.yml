@@ -52,7 +52,7 @@ jobs:
 
       - name: Publish
         run: |
-          dotnet publish -c Release -r ${{ matrix.runtime }} \
+          dotnet publish src -c Release -r ${{ matrix.runtime }} \
             --self-contained false \
             -p:PublishSingleFile=false \
             -p:PublishTrimmed=false \
