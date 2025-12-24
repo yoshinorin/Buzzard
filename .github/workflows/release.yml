@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runtime: win-x64
+            archive: zip
+          - runtime: win-x86
+            archive: zip
+          - runtime: win-arm64
+            archive: zip
+          - runtime: linux-x64
+            archive: tar.gz
+          - runtime: linux-arm64
+            archive: tar.gz
+          - runtime: osx-x64
+            archive: tar.gz
+          - runtime: osx-arm64
+            archive: tar.gz
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore
+
+      - name: Test
+        run: dotnet test --no-restore --no-build --logger "console;verbosity=detailed"
+
+      - name: Publish
+        run: |
+          dotnet publish -c Release -r ${{ matrix.runtime }} \
+            --self-contained false \
+            -p:PublishSingleFile=false \
+            -p:PublishTrimmed=false \
+            -o ./releases/${{ matrix.runtime }}
+
+      - name: Create Archive (zip)
+        if: matrix.archive == 'zip'
+        run: |
+          cd ./releases/${{ matrix.runtime }}
+          zip -r ../../buzzard-${{ matrix.runtime }}.zip .
+
+      - name: Create Archive (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        run: |
+          cd ./releases/${{ matrix.runtime }}
+          tar -czf ../../buzzard-${{ matrix.runtime }}.tar.gz .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: buzzard-${{ matrix.runtime }}
+          path: buzzard-${{ matrix.runtime }}.*
+          retention-days: 1
+
