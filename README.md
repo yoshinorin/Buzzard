@@ -41,7 +41,7 @@ The server will start and listen on the configured ports.
 
 ### Using Docker
 
-Please see [GHCR](https://github.com/yoshinorin/Buzzard/pkgs/container/docker-buzzard).
+Please see [GHCR](https://github.com/yoshinorin/Buzzard/pkgs/container/docker-buzzard) and [examples](docker/examples).
 
 ## Configuration
 

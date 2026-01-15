@@ -2,6 +2,10 @@
 
 This document describes all configuration options available in Buzzard.
 
+## Example
+
+Please see [development example](../src/appsettings.Development.json).
+
 ## Configuration Files
 
 Buzzard uses ASP.NET Core's configuration system with the following precedence:
