@@ -4,6 +4,13 @@
 
 A firewall-enabled reverse proxy server built with .NET Kestrel and YARP (Yet Another Reverse Proxy).
 
+## Features
+
+* Reverse proxy powered by YARP
+* Path-based request filtering (allow/deny by prefix, suffix, or contains)
+* User-Agent based request filtering (allow/deny by prefix, suffix, or contains)
+* OpenTelemetry support (logging, metrics, tracing)
+
 ## Requirements
 
 - .NET 10.0
