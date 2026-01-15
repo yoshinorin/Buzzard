@@ -28,7 +28,7 @@ public class FirewallMiddleware
 
         if (_pathValidator.IsPathBlocked(request.Path))
         {
-            _logger.LogError("Request blocked by Path: {request}", request);
+            _logger.LogError("Request blocked by Path: {Ip} {Method} {Path} {UserAgent}", request.Ip, request.Method, request.Path, request.UserAgent);
             context.Response.StatusCode = 403;
 #if DEBUG
             await context.Response.WriteAsync("Forbidden");
@@ -38,7 +38,7 @@ public class FirewallMiddleware
 
         if (_userAgentValidator.IsUserAgentBlocked(request.UserAgent))
         {
-            _logger.LogError("Request blocked by UserAgent: {request}", request);
+            _logger.LogError("Request blocked by UserAgent: {Ip} {Method} {Path} {UserAgent}", request.Ip, request.Method, request.Path, request.UserAgent);
             context.Response.StatusCode = 403;
 #if DEBUG
             await context.Response.WriteAsync("Forbidden");
@@ -46,7 +46,7 @@ public class FirewallMiddleware
             return;
         }
 
-        _logger.LogInformation("Request allowed: {request}", request);
+        _logger.LogInformation("Request allowed: {Ip} {Method} {Path} {UserAgent}", request.Ip, request.Method, request.Path, request.UserAgent);
         await _next(context);
     }
 }
