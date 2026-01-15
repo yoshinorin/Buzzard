@@ -51,6 +51,18 @@ See: [Configuration Documentation](docs/configuration.md).
 
 See: [Development Documentation](docs/development.md).
 
+## Using Stacks
+
+| Name | Description |
+|------|-------------|
+| [C#](https://github.com/dotnet/csharplang) | Programming language |
+| [Kestrel](https://github.com/dotnet/aspnetcore) | Web server |
+| [YARP](https://github.com/dotnet/yarp) | Reverse proxy |
+| [ZLogger](https://github.com/Cysharp/ZLogger) | Structured logging |
+| [OpenTelemetry .NET](https://github.com/open-telemetry/opentelemetry-dotnet) | Observability (logging, metrics, tracing) |
+| [xUnit](https://github.com/xunit/xunit) | Testing framework |
+| [Moq](https://github.com/devlooped/moq) | Mocking library |
+
 ## License
 
 This code is open source software licensed under the [MIT License](LICENSE).
