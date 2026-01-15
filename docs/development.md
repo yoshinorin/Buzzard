@@ -18,6 +18,13 @@ dotnet watch run --project src
 
 The server will start on `http://localhost:5134`, `5135` and `5136` by default.
 
+## Code Format
+
+```bash
+# root dir
+dotnet format -v detailed
+```
+
 ## Build Release Binary
 
 ```bash
