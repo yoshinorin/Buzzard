@@ -71,7 +71,7 @@ jobs:
           tar -czf ../../buzzard-${{ matrix.runtime }}.tar.gz .
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: buzzard-${{ matrix.runtime }}
           path: buzzard-${{ matrix.runtime }}.*
