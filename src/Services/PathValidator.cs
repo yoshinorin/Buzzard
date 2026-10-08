@@ -31,7 +31,8 @@ public class PathValidator : IPathValidator
 
     public bool IsPathBlocked(string path)
     {
-        if (IsPathAllowed(path))
+        // Backends may interpret these characters differently, so allow rules must not override deny rules for such paths.
+        if (!IsAmbiguous(path) && IsPathAllowed(path))
         {
             return false;
         }
@@ -42,4 +43,7 @@ public class PathValidator : IPathValidator
         }
         return false;
     }
+
+    private static bool IsAmbiguous(string path) =>
+        path.IndexOfAny([';', '%', '\\']) >= 0;
 }

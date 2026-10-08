@@ -97,6 +97,35 @@ public class PathValidatorTests
         Assert.False(result);
     }
 
+    [Theory]
+    [InlineData("/admin;.js")]
+    [InlineData("/admin%2F.js")]
+    [InlineData("/admin\\.js")]
+    [InlineData("/api/public%2F../admin")]
+    public void IsPathBlocked_AmbiguousPathMatchesAllowAndDeny_ReturnsTrue(string path)
+    {
+        var config = new PathConfig();
+        config.Allow.StartsWith.Add("/api/public");
+        config.Allow.EndsWith.Add(".js");
+        config.Deny.Contains.Add("/admin");
+        var validator = new PathValidator(config);
+
+        Assert.True(validator.IsPathBlocked(path));
+    }
+
+    [Theory]
+    [InlineData("/static/app;v=1.js")]
+    [InlineData("/static/a%2Fb.js")]
+    public void IsPathBlocked_AmbiguousPathMatchesOnlyAllow_ReturnsFalse(string path)
+    {
+        var config = new PathConfig();
+        config.Allow.EndsWith.Add(".js");
+        config.Deny.Contains.Add("/admin");
+        var validator = new PathValidator(config);
+
+        Assert.False(validator.IsPathBlocked(path));
+    }
+
     [Fact]
     public void IsPathBlocked_OnlyDenyMatches_ReturnsTrue()
     {
