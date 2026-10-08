@@ -126,6 +126,64 @@ public class PathValidatorTests
         Assert.False(validator.IsPathBlocked(path));
     }
 
+    [Theory]
+    [InlineData("/private%2Fsecret")]
+    [InlineData("/private%252Fsecret")]
+    [InlineData("/private;/secret")]
+    [InlineData("/private\\secret")]
+    [InlineData("/private%5Csecret")]
+    [InlineData("//private/secret")]
+    [InlineData("/public/../private/secret")]
+    [InlineData("/public/..;/private/secret")]
+    [InlineData("/static/..%2F..%2Fprivate/secret")]
+    public void IsPathDenied_StartsWithNormalizedPath_ReturnsTrue(string path)
+    {
+        var config = new PathConfig();
+        config.Deny.StartsWith.Add("/private/");
+        var validator = new PathValidator(config);
+
+        Assert.True(validator.IsPathDenied(path));
+    }
+
+    [Theory]
+    [InlineData("/db.bak;x")]
+    [InlineData("/db%2Ebak")]
+    public void IsPathDenied_EndsWithNormalizedPath_ReturnsTrue(string path)
+    {
+        var config = new PathConfig();
+        config.Deny.EndsWith.Add(".bak");
+        var validator = new PathValidator(config);
+
+        Assert.True(validator.IsPathDenied(path));
+    }
+
+    [Theory]
+    [InlineData("/api/public%2F..%2F..%2Fadmin")]
+    [InlineData("/%2Fadmin")]
+    public void IsPathBlocked_EncodedPathMatchesAllowAndDeny_ReturnsTrue(string path)
+    {
+        var config = new PathConfig();
+        config.Allow.StartsWith.Add("/api/public");
+        config.Deny.Contains.Add("/admin");
+        var validator = new PathValidator(config);
+
+        Assert.True(validator.IsPathBlocked(path));
+    }
+
+    [Theory]
+    [InlineData("/public%2Fdata")]
+    [InlineData("/public;v=1/data")]
+    [InlineData("/public/../data")]
+    public void IsPathDenied_NormalizedPathDoesNotMatch_ReturnsFalse(string path)
+    {
+        var config = new PathConfig();
+        config.Deny.StartsWith.Add("/private/");
+        config.Deny.EndsWith.Add(".bak");
+        var validator = new PathValidator(config);
+
+        Assert.False(validator.IsPathDenied(path));
+    }
+
     [Fact]
     public void IsPathBlocked_OnlyDenyMatches_ReturnsTrue()
     {

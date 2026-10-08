@@ -11,22 +11,18 @@ public class PathValidator : IPathValidator
         _pathConfig = pathConfig;
     }
 
+    private const int MaxDecodeIterations = 3;
+
     public bool IsPathAllowed(string path)
     {
-        var p = path.ToLowerInvariant();
-        var allow = _pathConfig.Allow;
-        return allow.Contains.Any(pattern => p.Contains(pattern)) ||
-               allow.StartsWith.Any(pattern => p.StartsWith(pattern)) ||
-               allow.EndsWith.Any(pattern => p.EndsWith(pattern));
+        return Matches(path.ToLowerInvariant(), _pathConfig.Allow);
     }
 
     public bool IsPathDenied(string path)
     {
         var p = path.ToLowerInvariant();
-        var deny = _pathConfig.Deny;
-        return deny.Contains.Any(pattern => p.Contains(pattern)) ||
-               deny.StartsWith.Any(pattern => p.StartsWith(pattern)) ||
-               deny.EndsWith.Any(pattern => p.EndsWith(pattern));
+        // Also match the normalized form because backends may decode or normalize the forwarded path.
+        return Matches(p, _pathConfig.Deny) || Matches(Normalize(p), _pathConfig.Deny);
     }
 
     public bool IsPathBlocked(string path)
@@ -46,4 +42,52 @@ public class PathValidator : IPathValidator
 
     private static bool IsAmbiguous(string path) =>
         path.IndexOfAny([';', '%', '\\']) >= 0;
+
+    private static bool Matches(string path, PathRules rules) =>
+        rules.Contains.Any(pattern => path.Contains(pattern)) ||
+        rules.StartsWith.Any(pattern => path.StartsWith(pattern)) ||
+        rules.EndsWith.Any(pattern => path.EndsWith(pattern));
+
+    private static string Normalize(string path)
+    {
+        var decoded = path;
+        for (var i = 0; i < MaxDecodeIterations; i++)
+        {
+            var next = Uri.UnescapeDataString(decoded);
+            if (next == decoded)
+            {
+                break;
+            }
+            decoded = next;
+        }
+
+        var rawSegments = decoded.Replace('\\', '/').Split('/');
+        var segments = new List<string>();
+        var trailingSlash = false;
+        foreach (var rawSegment in rawSegments)
+        {
+            var parameterIndex = rawSegment.IndexOf(';');
+            var segment = parameterIndex >= 0 ? rawSegment[..parameterIndex] : rawSegment;
+
+            trailingSlash = segment is "" or "." or "..";
+            switch (segment)
+            {
+                case "":
+                case ".":
+                    break;
+                case "..":
+                    if (segments.Count > 0)
+                    {
+                        segments.RemoveAt(segments.Count - 1);
+                    }
+                    break;
+                default:
+                    segments.Add(segment);
+                    break;
+            }
+        }
+
+        var normalized = "/" + string.Join('/', segments);
+        return trailingSlash && segments.Count > 0 ? normalized + "/" : normalized;
+    }
 }
