@@ -62,6 +62,38 @@ This affects deployments behind proxies or CDNs that add headers with non-ASCII 
 
 See [YARP HTTP client configuration](https://learn.microsoft.com/aspnet/core/fundamentals/servers/yarp/http-client-config) for details.
 
+## Client IP Settings
+
+By default, Buzzard uses the IP address of the incoming connection as the client IP. Forwarded headers such as `X-Forwarded-For` are ignored because any client can send them.
+
+When Buzzard runs behind other proxies (e.g. a CDN and a load balancer), configure which header contains the client IP and which proxies are trusted to set it:
+
+```json
+"ForwardedHeaders": {
+  "ClientIpHeader": "X-Test-Client-Ip",
+  "KnownProxies": ["10.0.0.1"],
+  "KnownNetworks": ["10.0.0.0/8"],
+  "DownstreamClientIpHeader": "X-Test-Downstream-Ip"
+}
+```
+
+Configuration options:
+
+- `ClientIpHeader`: Request header containing the client IP (e.g. `X-Forwarded-For`, or `CF-Connecting-IP` behind Cloudflare). If omitted, the connection IP is used.
+- `KnownProxies`: IP addresses of proxies trusted to set `ClientIpHeader`. Optional.
+- `KnownNetworks`: Networks in CIDR notation trusted to set `ClientIpHeader`. Optional.
+- `DownstreamClientIpHeader`: Request header in which the client IP is sent to the destination. Any value sent by the client is replaced. If omitted, this header is not added.
+
+When `KnownProxies` or `KnownNetworks` is configured, `ClientIpHeader` is used only when the connection comes from them. If neither is configured, `ClientIpHeader` is used for every connection and a warning is logged at startup. In this case, any client that can reach Buzzard directly can spoof its IP. When the header value is not a valid IP address, the connection IP is used. Invalid values in `KnownProxies` or `KnownNetworks` cause a startup error.
+
+The client IP is used for request logs and the `X-Forwarded-For` header sent to the destination. YARP replaces any `X-Forwarded-For` sent by the client.
+
+`ClientIpHeader` is forwarded to the destination with its original value. `X-Original-For` (the connection IP and port) is also added when the header is used. Because the client can send `ClientIpHeader` directly when it does not come through the trusted proxies, the destination should use `X-Forwarded-For` or `DownstreamClientIpHeader` instead.
+
+**Note**: Trusting a header is only safe when clients cannot reach Buzzard without going through the trusted proxies. Restrict direct access at the network level.
+
+See [Configure ASP.NET Core to work with proxy servers and load balancers](https://learn.microsoft.com/aspnet/core/host-and-deploy/proxy-load-balancer) for details.
+
 ## Firewall Settings
 
 Configure firewall rules to allow/deny requests:
