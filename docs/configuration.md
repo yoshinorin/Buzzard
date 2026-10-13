@@ -39,6 +39,29 @@ Configure YARP reverse proxy in `appsettings.json`:
 }
 ```
 
+### Non-ASCII Request Headers
+
+By default, YARP rejects request headers containing non-ASCII characters and returns `502 Bad Gateway`. For example, a request with `X-Test-Header: Tōkyō` fails with `HttpRequestException: Request headers must contain only ASCII characters.`
+
+This affects deployments behind proxies or CDNs that add headers with non-ASCII values, such as Cloudflare's visitor location headers. To forward such headers, set `HttpClient.RequestHeaderEncoding` on each cluster:
+
+```json
+"Clusters": {
+  "cluster1": {
+    "HttpClient": { "RequestHeaderEncoding": "utf-8" },
+    "Destinations": {
+      "destination1": {
+        "Address": "https://example.com/"
+      }
+    }
+  }
+}
+```
+
+**Note**: Make sure the backend accepts UTF-8 encoded header values.
+
+See [YARP HTTP client configuration](https://learn.microsoft.com/aspnet/core/fundamentals/servers/yarp/http-client-config) for details.
+
 ## Firewall Settings
 
 Configure firewall rules to allow/deny requests:
