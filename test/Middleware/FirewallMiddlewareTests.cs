@@ -82,6 +82,33 @@ public class FirewallMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_UserAgentExemptPath_SkipsUserAgentCheck()
+    {
+        var context = CreateHttpContext("/robots.txt");
+        _mockUserAgentValidator.Setup(x => x.IsPathExempt("/robots.txt")).Returns(true);
+        _mockUserAgentValidator.Setup(x => x.FindBlockingRule("Test-Agent")).Returns("UserAgent.Deny.StartsWith:test");
+
+        await _middleware.InvokeAsync(context);
+
+        _mockNext.Verify(x => x(context), Times.Once);
+        _mockUserAgentValidator.Verify(x => x.FindBlockingRule(It.IsAny<string>()), Times.Never);
+        Assert.Equal(200, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_UserAgentExemptPath_StillAppliesPathRules()
+    {
+        var context = CreateHttpContext("/robots.txt");
+        _mockUserAgentValidator.Setup(x => x.IsPathExempt("/robots.txt")).Returns(true);
+        _mockPathValidator.Setup(x => x.FindBlockingRule("/robots.txt")).Returns("Path.Deny.EndsWith:.txt");
+
+        await _middleware.InvokeAsync(context);
+
+        _mockNext.Verify(x => x(context), Times.Never);
+        Assert.Equal(403, context.Response.StatusCode);
+    }
+
+    [Fact]
     public async Task InvokeAsync_BlockedPath_LogsWarningWithRule()
     {
         var context = CreateHttpContext("/admin");

@@ -33,3 +33,11 @@ curl -o /dev/null -s -w "%{http_code} %{url_effective}\n" -H "User-Agent: evil/1
 curl -o /dev/null -s -w "%{http_code} %{url_effective}\n" -H "User-Agent: foobotbar" "$BASE_URL_5135/"
 curl -o /dev/null -s -w "%{http_code} %{url_effective}\n" -H "User-Agent: foo BOT bar" "$BASE_URL_5135/"
 
+echo "=== Expects: 200 or 502 - user-agent rules are not applied to exempt paths"
+curl -o /dev/null -s -w "%{http_code} %{url_effective}\n" -H "User-Agent: foobotbar" "$BASE_URL_5134/robots.txt"
+curl -o /dev/null -s -w "%{http_code} %{url_effective}\n" -H "User-Agent: foobotbar" "$BASE_URL_5135/robots.txt"
+
+echo "=== Expects: 403 - paths similar to exempt paths are not exempt"
+curl -o /dev/null -s -w "%{http_code} %{url_effective}\n" -H "User-Agent: foobotbar" "$BASE_URL_5134/ROBOTS.TXT"
+curl -o /dev/null -s -w "%{http_code} %{url_effective}\n" -H "User-Agent: foobotbar" "$BASE_URL_5134/robots.txt/x"
+curl -o /dev/null -s -w "%{http_code} %{url_effective}\n" -H "User-Agent: foobotbar" "$BASE_URL_5134/robots.txt;x"

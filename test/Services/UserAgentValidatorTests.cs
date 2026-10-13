@@ -199,4 +199,31 @@ public class UserAgentValidatorTests
 
         Assert.Null(validator.FindBlockingRule(userAgent));
     }
+
+    [Theory]
+    [InlineData("/robots.txt", true)]
+    [InlineData("/ROBOTS.TXT", false)]
+    [InlineData("/robots.txt/", false)]
+    [InlineData("/robots.txt/x", false)]
+    [InlineData("/robots.txt;x", false)]
+    [InlineData("//robots.txt", false)]
+    [InlineData("/robots.txt.bak", false)]
+    [InlineData("/x/robots.txt", false)]
+    [InlineData("/", false)]
+    public void IsPathExempt_MatchesExactPathOnly(string path, bool expected)
+    {
+        var firewallConfig = new FirewallConfig();
+        firewallConfig.UserAgent.ExemptPaths.Add("/robots.txt");
+        var validator = new UserAgentValidator(firewallConfig);
+
+        Assert.Equal(expected, validator.IsPathExempt(path));
+    }
+
+    [Fact]
+    public void IsPathExempt_NoExemptPaths_ReturnsFalse()
+    {
+        var validator = new UserAgentValidator(new FirewallConfig());
+
+        Assert.False(validator.IsPathExempt("/robots.txt"));
+    }
 }

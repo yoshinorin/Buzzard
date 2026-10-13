@@ -37,6 +37,11 @@ public class UserAgentValidator : IUserAgentValidator
         return match is null ? null : $"UserAgent.Deny.{match}";
     }
 
+    public bool IsPathExempt(string path)
+    {
+        return _userAgentConfig.ExemptPaths.Contains(path);
+    }
+
     private static string? FindMatch(string userAgent, UserAgentRules rules)
     {
         var contains = rules.Contains.FirstOrDefault(pattern => userAgent.Contains(pattern));

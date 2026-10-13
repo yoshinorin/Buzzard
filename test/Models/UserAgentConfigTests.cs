@@ -1,4 +1,5 @@
 using Buzzard.Models;
+using Microsoft.Extensions.Configuration;
 
 namespace Buzzard.Tests;
 
@@ -220,5 +221,30 @@ public class UserAgentConfigTests
         rules.EndsWith = new HashSet<string> { "", "(compatible)", "  " };
 
         Assert.Equal(new HashSet<string> { "", "(compatible)", "  " }, rules.EndsWith);
+    }
+
+    [Fact]
+    public void UserAgentConfig_ExemptPaths_InitializesEmpty()
+    {
+        var config = new UserAgentConfig();
+
+        Assert.Empty(config.ExemptPaths);
+    }
+
+    [Fact]
+    public void UserAgentConfig_ExemptPaths_BindsFromConfigurationWithoutChangingCase()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Firewall:UserAgent:ExemptPaths:0"] = "/robots.txt",
+                ["Firewall:UserAgent:ExemptPaths:1"] = "/Sitemap.xml",
+            })
+            .Build();
+
+        var config = configuration.GetSection("Firewall").Get<FirewallConfig>()!;
+
+        Assert.Equal(new HashSet<string> { "/robots.txt", "/Sitemap.xml" }, config.UserAgent.ExemptPaths);
+        Assert.DoesNotContain("/sitemap.xml", config.UserAgent.ExemptPaths);
     }
 }

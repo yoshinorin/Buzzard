@@ -52,7 +52,7 @@ public class FirewallMiddleware
             return;
         }
 
-        var userAgentRule = _userAgentValidator.FindBlockingRule(request.UserAgent);
+        var userAgentRule = _userAgentValidator.IsPathExempt(request.Path) ? null : _userAgentValidator.FindBlockingRule(request.UserAgent);
         if (userAgentRule is not null)
         {
             using (BeginRequestScope(context, request, ("Rule", userAgentRule)))

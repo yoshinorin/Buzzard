@@ -123,10 +123,19 @@ Configure firewall rules to allow/deny requests:
       "EndsWith": [
         "bot"
       ]
-    }
+    },
+    "ExemptPaths": ["/robots.txt"]
   }
 }
 ```
+
+### User-Agent Exempt Paths
+
+`UserAgent.ExemptPaths` lists paths where User-Agent rules are not applied. For example, exempting `/robots.txt` lets denied bots read it and follow its crawling rules.
+
+- Paths are matched exactly and case-sensitively. `/robots.txt` does not exempt `/ROBOTS.TXT`, `/robots.txt/`, `/robots.txt;x` or `/robots.txt/x`.
+- The query string is not part of the path, so `/robots.txt?x=1` is also exempt.
+- Path rules are still applied to exempt paths.
 
 ## Request Logging Settings
 

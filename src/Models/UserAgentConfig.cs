@@ -4,6 +4,8 @@ public class UserAgentConfig
 {
     public UserAgentRules Allow { get; set; } = new();
     public UserAgentRules Deny { get; set; } = new();
+    // Exact, case-sensitive match only. Prefix or case-insensitive matching would allow bypassing User-Agent rules.
+    public HashSet<string> ExemptPaths { get; set; } = new(StringComparer.Ordinal);
 }
 
 public class UserAgentRules
