@@ -20,6 +20,7 @@ public static class LoggingExtensions
     {
         options.FilePathSelector = (timestamp, sequenceNumber) =>
             $"logs/application_{timestamp.ToLocalTime():yyyy-MM-dd}_{sequenceNumber}.log";
+        options.IncludeScopes = true;
         options.RollingInterval = RollingInterval.Day;
         options.RollingSizeKB = 1024;
         options.UseJsonFormatter(ConfigureJsonFormatter);
@@ -27,6 +28,7 @@ public static class LoggingExtensions
 
     private static void ConfigureConsoleLogging(ZLoggerConsoleOptions options, IWebHostEnvironment environment)
     {
+        options.IncludeScopes = true;
         options.UseJsonFormatter(formatter =>
         {
             if (environment.IsDevelopment())

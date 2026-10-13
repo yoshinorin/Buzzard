@@ -13,33 +13,45 @@ public class UserAgentValidator : IUserAgentValidator
 
     public bool IsUserAgentAllowed(string userAgent)
     {
-        var ua = userAgent.ToLowerInvariant();
-        var allow = _userAgentConfig.Allow;
-        return allow.Contains.Any(pattern => ua.Contains(pattern)) ||
-               allow.StartsWith.Any(pattern => ua.StartsWith(pattern)) ||
-               allow.EndsWith.Any(pattern => ua.EndsWith(pattern));
+        return FindMatch(userAgent.ToLowerInvariant(), _userAgentConfig.Allow) is not null;
     }
 
     public bool IsUserAgentDenied(string userAgent)
     {
-        var ua = userAgent.ToLowerInvariant();
-        var deny = _userAgentConfig.Deny;
-        return deny.Contains.Any(pattern => ua.Contains(pattern)) ||
-               deny.StartsWith.Any(pattern => ua.StartsWith(pattern)) ||
-               deny.EndsWith.Any(pattern => ua.EndsWith(pattern));
+        return FindMatch(userAgent.ToLowerInvariant(), _userAgentConfig.Deny) is not null;
     }
 
     public bool IsUserAgentBlocked(string userAgent)
     {
+        return FindBlockingRule(userAgent) is not null;
+    }
+
+    public string? FindBlockingRule(string userAgent)
+    {
         if (IsUserAgentAllowed(userAgent))
         {
-            return false;
+            return null;
         }
 
-        if (IsUserAgentDenied(userAgent))
+        var match = FindMatch(userAgent.ToLowerInvariant(), _userAgentConfig.Deny);
+        return match is null ? null : $"UserAgent.Deny.{match}";
+    }
+
+    private static string? FindMatch(string userAgent, UserAgentRules rules)
+    {
+        var contains = rules.Contains.FirstOrDefault(pattern => userAgent.Contains(pattern));
+        if (contains is not null)
         {
-            return true;
+            return $"Contains:{contains}";
         }
-        return false;
+
+        var startsWith = rules.StartsWith.FirstOrDefault(pattern => userAgent.StartsWith(pattern));
+        if (startsWith is not null)
+        {
+            return $"StartsWith:{startsWith}";
+        }
+
+        var endsWith = rules.EndsWith.FirstOrDefault(pattern => userAgent.EndsWith(pattern));
+        return endsWith is null ? null : $"EndsWith:{endsWith}";
     }
 }

@@ -263,4 +263,33 @@ public class PathValidatorTests
         Assert.Empty(pathRules.StartsWith);
         Assert.Empty(pathRules.EndsWith);
     }
+
+    [Theory]
+    [InlineData("/admin/users", "Path.Deny.Contains:/admin")]
+    [InlineData("/private/data", "Path.Deny.StartsWith:/private/")]
+    [InlineData("/db.bak", "Path.Deny.EndsWith:.bak")]
+    [InlineData("/%2Fadmin", "Path.Deny.Contains:/admin")]
+    public void FindBlockingRule_DenyMatches_ReturnsMatchedRule(string path, string expected)
+    {
+        var config = new PathConfig();
+        config.Deny.Contains.Add("/admin");
+        config.Deny.StartsWith.Add("/private/");
+        config.Deny.EndsWith.Add(".bak");
+        var validator = new PathValidator(config);
+
+        Assert.Equal(expected, validator.FindBlockingRule(path));
+    }
+
+    [Theory]
+    [InlineData("/admin/health")]
+    [InlineData("/some/random/path")]
+    public void FindBlockingRule_NotBlocked_ReturnsNull(string path)
+    {
+        var config = new PathConfig();
+        config.Allow.Contains.Add("/health");
+        config.Deny.Contains.Add("/admin");
+        var validator = new PathValidator(config);
+
+        Assert.Null(validator.FindBlockingRule(path));
+    }
 }

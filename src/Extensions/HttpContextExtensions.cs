@@ -29,7 +29,8 @@ public static class HttpContextExtensions
         var queryString = context.Request.QueryString.ToString();
         var userAgent = context.Request.Headers.UserAgent.ToString();
         var method = context.Request.Method;
+        var host = context.Request.Host.Value ?? "";
 
-        return new Request(method: method, path: path, ip: clientIp, queryString: queryString, userAgent: userAgent);
+        return new Request(method: method, host: host, path: path, ip: clientIp, queryString: queryString, userAgent: userAgent);
     }
 }

@@ -73,6 +73,40 @@ Configure firewall rules to allow/deny requests:
 }
 ```
 
+## Request Logging Settings
+
+Each request is logged once. Blocked requests are logged at `Warning`, forwarding failures at `Error`, and other requests at `Information` after the response is produced.
+
+```json
+"RequestLogging": {
+  "MaskedQueryKeys": ["token", "access_token", "api_key", "apikey", "key", "password", "secret"],
+  "MaskedHeaders": ["Authorization", "Proxy-Authorization", "Cookie", "X-Api-Key", "X-Auth-Token"]
+}
+```
+
+Configuration options:
+
+- `MaskedQueryKeys`: Query parameter names whose values are replaced with `***` in logs (case-insensitive). If omitted, the keys shown above are used. Set `[]` to disable masking.
+- `MaskedHeaders`: Request header names whose values are replaced with `***` in logs (case-insensitive). If omitted, the headers shown above are used. Set `[]` to disable masking.
+
+Fields added to request logs:
+
+| Field | Description |
+|-------|-------------|
+| `Host` | Request host |
+| `QueryString` | Query string with masked values |
+| `Rule` | Matched rule for blocked requests (e.g. `Path.Deny.Contains:/admin`) |
+| `StatusCode` | Response status code |
+| `ElapsedMs` | Processing time in milliseconds |
+| `ForwarderError` | YARP forwarder error type when forwarding failed |
+| `Header.<name>` | Every request header, with the name in lowercase (e.g. `Header.cf-ray`). Values of `MaskedHeaders` are replaced with `***` |
+
+ASP.NET Core also adds `TraceId`, `SpanId`, `ParentId`, `RequestId`, `RequestPath` and `ConnectionId` to every log. `TraceId` follows the incoming `traceparent` header.
+
+Path, User-Agent, query string and header values in logs are truncated to 1024 characters.
+
+**Note**: Request headers may contain personal data (e.g. Cloudflare's `CF-IPCity`, `CF-IPLatitude`, `CF-IPLongitude`, `CF-Postal-Code`). Review your log retention policy accordingly.
+
 ## OpenTelemetry Settings
 
 Buzzard supports OpenTelemetry for observability (tracing, metrics, and logs). Configure it in `appsettings.json`:

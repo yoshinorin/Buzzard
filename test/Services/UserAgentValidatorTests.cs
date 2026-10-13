@@ -171,4 +171,32 @@ public class UserAgentValidatorTests
         Assert.Empty(userAgentRules.StartsWith);
         Assert.Empty(userAgentRules.EndsWith);
     }
+
+    [Theory]
+    [InlineData("BadBot/1.0", "UserAgent.Deny.Contains:badbot")]
+    [InlineData("Evil/2.0", "UserAgent.Deny.StartsWith:evil/")]
+    [InlineData("Mozilla/5.0 (spam)", "UserAgent.Deny.EndsWith:(spam)")]
+    public void FindBlockingRule_DenyMatches_ReturnsMatchedRule(string userAgent, string expected)
+    {
+        var firewallConfig = new FirewallConfig();
+        firewallConfig.UserAgent.Deny.Contains.Add("badbot");
+        firewallConfig.UserAgent.Deny.StartsWith.Add("evil/");
+        firewallConfig.UserAgent.Deny.EndsWith.Add("(spam)");
+        var validator = new UserAgentValidator(firewallConfig);
+
+        Assert.Equal(expected, validator.FindBlockingRule(userAgent));
+    }
+
+    [Theory]
+    [InlineData("GoodBot/1.0")]
+    [InlineData("RandomBrowser/1.0")]
+    public void FindBlockingRule_NotBlocked_ReturnsNull(string userAgent)
+    {
+        var firewallConfig = new FirewallConfig();
+        firewallConfig.UserAgent.Allow.Contains.Add("goodbot");
+        firewallConfig.UserAgent.Deny.Contains.Add("bot");
+        var validator = new UserAgentValidator(firewallConfig);
+
+        Assert.Null(validator.FindBlockingRule(userAgent));
+    }
 }

@@ -15,38 +15,58 @@ public class PathValidator : IPathValidator
 
     public bool IsPathAllowed(string path)
     {
-        return Matches(path.ToLowerInvariant(), _pathConfig.Allow);
+        return FindMatch(path.ToLowerInvariant(), _pathConfig.Allow) is not null;
     }
 
     public bool IsPathDenied(string path)
     {
-        var p = path.ToLowerInvariant();
-        // Also match the normalized form because backends may decode or normalize the forwarded path.
-        return Matches(p, _pathConfig.Deny) || Matches(Normalize(p), _pathConfig.Deny);
+        return FindDenyMatch(path) is not null;
     }
 
     public bool IsPathBlocked(string path)
     {
+        return FindBlockingRule(path) is not null;
+    }
+
+    public string? FindBlockingRule(string path)
+    {
         // Backends may interpret these characters differently, so allow rules must not override deny rules for such paths.
         if (!IsAmbiguous(path) && IsPathAllowed(path))
         {
-            return false;
+            return null;
         }
 
-        if (IsPathDenied(path))
-        {
-            return true;
-        }
-        return false;
+        var match = FindDenyMatch(path);
+        return match is null ? null : $"Path.Deny.{match}";
+    }
+
+    private string? FindDenyMatch(string path)
+    {
+        var p = path.ToLowerInvariant();
+        // Also match the normalized form because backends may decode or normalize the forwarded path.
+        return FindMatch(p, _pathConfig.Deny) ?? FindMatch(Normalize(p), _pathConfig.Deny);
     }
 
     private static bool IsAmbiguous(string path) =>
         path.IndexOfAny([';', '%', '\\']) >= 0;
 
-    private static bool Matches(string path, PathRules rules) =>
-        rules.Contains.Any(pattern => path.Contains(pattern)) ||
-        rules.StartsWith.Any(pattern => path.StartsWith(pattern)) ||
-        rules.EndsWith.Any(pattern => path.EndsWith(pattern));
+    private static string? FindMatch(string path, PathRules rules)
+    {
+        var contains = rules.Contains.FirstOrDefault(pattern => path.Contains(pattern));
+        if (contains is not null)
+        {
+            return $"Contains:{contains}";
+        }
+
+        var startsWith = rules.StartsWith.FirstOrDefault(pattern => path.StartsWith(pattern));
+        if (startsWith is not null)
+        {
+            return $"StartsWith:{startsWith}";
+        }
+
+        var endsWith = rules.EndsWith.FirstOrDefault(pattern => path.EndsWith(pattern));
+        return endsWith is null ? null : $"EndsWith:{endsWith}";
+    }
 
     private static string Normalize(string path)
     {

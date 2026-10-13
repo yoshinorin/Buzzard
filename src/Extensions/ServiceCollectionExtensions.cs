@@ -15,6 +15,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPathValidator, PathValidator>();
         services.AddSingleton<IUserAgentValidator, UserAgentValidator>();
 
+        var requestLoggingConfig = configuration.GetSection("RequestLogging").Get<RequestLoggingConfig>() ?? new RequestLoggingConfig();
+        services.AddSingleton(requestLoggingConfig);
+        services.AddSingleton<QueryStringMasker>();
+        services.AddSingleton<HeaderMasker>();
+
         return services;
     }
 }

@@ -5,4 +5,5 @@ public interface IUserAgentValidator
     bool IsUserAgentAllowed(string userAgent);
     bool IsUserAgentDenied(string userAgent);
     bool IsUserAgentBlocked(string userAgent);
+    string? FindBlockingRule(string userAgent);
 }
