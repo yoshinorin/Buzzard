@@ -1,0 +1,220 @@
+using System.Net;
+using Buzzard.Middleware;
+using Buzzard.Models;
+using Buzzard.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
+using Yarp.ReverseProxy.Forwarder;
+
+namespace Buzzard.Tests;
+
+public class ClientBanMiddlewareTests
+{
+    private const string ClientIp = "203.0.113.10";
+
+    private readonly FakeTimeProvider _timeProvider = new();
+    private Action<HttpContext> _respond = context => context.Response.StatusCode = StatusCodes.Status404NotFound;
+    private int _nextCalls;
+
+    [Fact]
+    public async Task BelowThreshold_IsNotBanned()
+    {
+        var middleware = CreateMiddleware();
+        await SendErrorsAsync(middleware, 2);
+
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware));
+    }
+
+    [Theory]
+    [InlineData(StatusCodes.Status403Forbidden)]
+    [InlineData(StatusCodes.Status404NotFound)]
+    public async Task ReachingThreshold_BlocksSubsequentRequests(int statusCode)
+    {
+        var middleware = CreateMiddleware();
+        _respond = context => context.Response.StatusCode = statusCode;
+        await SendErrorsAsync(middleware, 3);
+        var nextCallsBeforeBan = _nextCalls;
+
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware));
+        Assert.Equal(nextCallsBeforeBan, _nextCalls);
+    }
+
+    [Fact]
+    public async Task Ban_IsLiftedAfterBanSeconds()
+    {
+        var middleware = CreateMiddleware();
+        await SendErrorsAsync(middleware, 3);
+
+        _timeProvider.Advance(TimeSpan.FromSeconds(599));
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware));
+
+        _timeProvider.Advance(TimeSpan.FromSeconds(1));
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware));
+    }
+
+    [Fact]
+    public async Task ErrorsOutsideWindow_AreNotCounted()
+    {
+        var middleware = CreateMiddleware();
+        await SendErrorsAsync(middleware, 2);
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
+        await SendErrorsAsync(middleware, 1);
+
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware));
+    }
+
+    [Theory]
+    [InlineData(StatusCodes.Status500InternalServerError)]
+    [InlineData(StatusCodes.Status502BadGateway)]
+    [InlineData(StatusCodes.Status503ServiceUnavailable)]
+    [InlineData(StatusCodes.Status504GatewayTimeout)]
+    [InlineData(StatusCodes.Status499ClientClosedRequest)]
+    public async Task UncountedStatusCodes_DoNotBan(int statusCode)
+    {
+        var middleware = CreateMiddleware();
+        _respond = context => context.Response.StatusCode = statusCode;
+        await SendErrorsAsync(middleware, 3);
+
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware));
+    }
+
+    [Fact]
+    public async Task CountedStatusCodes_CanBeConfigured()
+    {
+        var middleware = CreateMiddleware(config => config.CountedStatusCodes = [StatusCodes.Status500InternalServerError]);
+        await SendErrorsAsync(middleware, 3);
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware));
+
+        _respond = context => context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        await SendErrorsAsync(middleware, 3);
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware));
+    }
+
+    [Fact]
+    public async Task ForwarderErrors_AreNotCounted()
+    {
+        var middleware = CreateMiddleware();
+        _respond = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            context.Features.Set<IForwarderErrorFeature>(new TestForwarderErrorFeature());
+        };
+        await SendErrorsAsync(middleware, 3);
+
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware));
+    }
+
+    [Fact]
+    public async Task SafetyActivation_SuspendsNewBansAndKeepsExistingBans()
+    {
+        var middleware = CreateMiddleware();
+        await SendErrorsAsync(middleware, 3, "203.0.113.1");
+        await SendErrorsAsync(middleware, 3, "203.0.113.2");
+        await SendErrorsAsync(middleware, 3, "203.0.113.3");
+        await SendErrorsAsync(middleware, 3, "203.0.113.4");
+
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware, "203.0.113.1"));
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware, "203.0.113.2"));
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware, "203.0.113.3"));
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware, "203.0.113.4"));
+    }
+
+    [Fact]
+    public async Task SafetyDeactivation_ResumesNewBans()
+    {
+        var middleware = CreateMiddleware();
+        await SendErrorsAsync(middleware, 3, "203.0.113.1");
+        await SendErrorsAsync(middleware, 3, "203.0.113.2");
+        await SendErrorsAsync(middleware, 3, "203.0.113.3");
+
+        _timeProvider.Advance(TimeSpan.FromSeconds(60));
+        await SendErrorsAsync(middleware, 3, "203.0.113.4");
+
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware, "203.0.113.4"));
+    }
+
+    [Fact]
+    public async Task ObserveMode_DoesNotBlock()
+    {
+        var middleware = CreateMiddleware(config => config.Mode = ClientBanMode.Observe);
+        await SendErrorsAsync(middleware, 3);
+
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware));
+    }
+
+    [Theory]
+    [InlineData("203.0.113.0/24", ClientIp)]
+    [InlineData(ClientIp, ClientIp)]
+    [InlineData("203.0.113.0/24", "::ffff:203.0.113.10")]
+    public async Task ExemptNetworks_AreNotBanned(string exemptNetwork, string remoteIp)
+    {
+        var middleware = CreateMiddleware(config => config.ExemptNetworks = [exemptNetwork]);
+        await SendErrorsAsync(middleware, 3, remoteIp);
+
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware, remoteIp));
+    }
+
+    [Fact]
+    public async Task OtherClients_AreNotAffectedByBan()
+    {
+        var middleware = CreateMiddleware();
+        await SendErrorsAsync(middleware, 3);
+
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware, "198.51.100.20"));
+    }
+
+    private ClientBanMiddleware CreateMiddleware(Action<ClientBanConfig>? configure = null)
+    {
+        var config = new ClientBanConfig
+        {
+            Mode = ClientBanMode.Enforce,
+            Threshold = 3,
+            WindowSeconds = 10,
+            BanSeconds = 600,
+            GlobalSafetyThreshold = 2,
+            GlobalSafetyWindowSeconds = 60,
+        };
+        configure?.Invoke(config);
+        var options = Options.Create(config);
+        var store = new ClientBanStore(options, _timeProvider, NullLogger<ClientBanStore>.Instance);
+        RequestDelegate next = context =>
+        {
+            _nextCalls++;
+            _respond(context);
+            return Task.CompletedTask;
+        };
+        return new ClientBanMiddleware(next, NullLogger<ClientBanMiddleware>.Instance, store, options);
+    }
+
+    private static async Task SendErrorsAsync(ClientBanMiddleware middleware, int count, string remoteIp = ClientIp)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            await SendAsync(middleware, remoteIp);
+        }
+    }
+
+    private async Task<int> SendSuccessAsync(ClientBanMiddleware middleware, string remoteIp = ClientIp)
+    {
+        _respond = context => context.Response.StatusCode = StatusCodes.Status200OK;
+        return await SendAsync(middleware, remoteIp);
+    }
+
+    private static async Task<int> SendAsync(ClientBanMiddleware middleware, string remoteIp)
+    {
+        var context = new DefaultHttpContext();
+        context.Connection.RemoteIpAddress = IPAddress.Parse(remoteIp);
+        context.Request.Method = HttpMethods.Get;
+        context.Request.Path = "/test";
+        await middleware.InvokeAsync(context);
+        return context.Response.StatusCode;
+    }
+
+    private sealed class TestForwarderErrorFeature : IForwarderErrorFeature
+    {
+        public ForwarderError Error => ForwarderError.Request;
+        public Exception? Exception => null;
+    }
+}

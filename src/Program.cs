@@ -11,9 +11,11 @@ builder.Services.AddReverseProxy()
     .AddDownstreamClientIpHeader();
 builder.Services.AddClientIpForwarding(builder.Configuration);
 builder.Services.AddFirewall(builder.Configuration);
+builder.Services.AddClientBan(builder.Configuration);
 
 var app = builder.Build();
 app.UseClientIpForwarding();
+app.UseClientBan();
 app.UseMiddleware<FirewallMiddleware>();
 app.MapReverseProxy();
 

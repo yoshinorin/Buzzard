@@ -137,6 +137,59 @@ Configure firewall rules to allow/deny requests:
 - The query string is not part of the path, so `/robots.txt?x=1` is also exempt.
 - Path rules are still applied to exempt paths.
 
+### Client Ban
+
+Temporarily blocks clients that receive many error responses (e.g. scanners probing for files). Only error responses are counted, so pages with many assets do not affect legitimate users.
+
+```json
+"Firewall": {
+  "ClientBan": {
+    "Mode": "Observe",
+    "CountedStatusCodes": [403, 404],
+    "Threshold": 20,
+    "WindowSeconds": 10,
+    "BanSeconds": 600,
+    "MaxTrackedClients": 10000,
+    "GlobalSafetyThreshold": 10,
+    "GlobalSafetyWindowSeconds": 60,
+    "ExemptNetworks": ["192.0.2.0/24", "198.51.100.1"]
+  }
+}
+```
+
+Configuration options:
+
+- `Mode`: `Disabled` (default), `Observe` (logs clients that would be banned without blocking them) or `Enforce` (blocks them).
+- `CountedStatusCodes`: Response status codes counted as errors (default: `[403, 404]`). `403` responses returned by the firewall itself are also counted.
+- `Threshold`: Number of errors within `WindowSeconds` that bans a client (default: `20`).
+- `WindowSeconds`: Sliding window for counting errors (default: `10`).
+- `BanSeconds`: Ban duration in seconds (default: `600`). The ban ends at a fixed time and is not extended by requests during the ban.
+- `MaxTrackedClients`: Maximum number of tracked clients (default: `10000`). When exceeded, the least recently seen client that is not banned is discarded.
+- `GlobalSafetyThreshold` / `GlobalSafetyWindowSeconds`: When more than `GlobalSafetyThreshold` clients exceed `Threshold` within `GlobalSafetyWindowSeconds` (defaults: `10` / `60`), Buzzard assumes an outage (e.g. the destination returning 404 for every page) rather than an attack and stops new bans until the count falls back. Existing bans are kept.
+- `ExemptNetworks`: IP addresses or networks in CIDR notation that are never banned (e.g. monitoring services).
+
+Numeric options must be greater than `0`, otherwise Buzzard fails to start.
+
+Behavior:
+
+- Banned clients receive `403 Forbidden`.
+- Responses are not counted when forwarding to the destination fails (e.g. `502` while the destination is down).
+- The client IP is resolved as described in [Client IP Settings](#client-ip-settings). Configure it before enabling this feature behind a proxy, otherwise the proxy itself will be banned.
+- State is kept in memory. It is lost on restart and is not shared between instances.
+
+Logs:
+
+| Level | Event |
+|-------|-------|
+| `Warning` | A client is banned (or would be banned in `Observe` mode), with the error count and recent paths |
+| `Information` | A ban expires, with the number of requests received during the ban |
+| `Debug` | A request is blocked by a ban |
+| `Warning` | The safety mechanism is activated or deactivated |
+
+Expired bans are processed while handling requests, so the expiry log may be delayed until the next request.
+
+Recommended rollout: run in `Observe` mode for a few days, confirm that legitimate users are not detected, adjust `Threshold` if needed, then switch to `Enforce`.
+
 ## Request Logging Settings
 
 Each request is logged once. Blocked requests are logged at `Warning`, forwarding failures at `Error`, and other requests at `Information` after the response is produced.

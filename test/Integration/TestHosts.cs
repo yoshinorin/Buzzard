@@ -38,7 +38,8 @@ public sealed class TestBackend : IAsyncDisposable
 
 public static class BuzzardFactory
 {
-    public static WebApplicationFactory<Program> Create(string backendAddress, IDictionary<string, string?> settings)
+    public static WebApplicationFactory<Program> Create(
+        string backendAddress, IDictionary<string, string?> settings, Action<IServiceCollection>? configureServices = null)
     {
         var allSettings = new Dictionary<string, string?>(settings)
         {
@@ -51,7 +52,11 @@ public static class BuzzardFactory
         {
             builder.UseEnvironment("Testing");
             builder.ConfigureAppConfiguration(config => config.AddInMemoryCollection(allSettings));
-            builder.ConfigureTestServices(services => services.RemoveAll<ILoggerProvider>());
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<ILoggerProvider>();
+                configureServices?.Invoke(services);
+            });
         });
     }
 }
