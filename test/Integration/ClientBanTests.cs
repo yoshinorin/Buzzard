@@ -51,6 +51,23 @@ public class ClientBanTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task BansForwardedClientIpAfterExcessiveExtensionlessRequests()
+    {
+        await using var factory = CreateFactory(ClientBanMode.Enforce, extraSettings: new()
+        {
+            ["Firewall:ClientBan:RequestCount:Enabled"] = "true",
+        });
+
+        Assert.Equal(StatusCodes.Status200OK, await SendAsync(factory, BannedClientIp, "/allowed.png"));
+        Assert.Equal(StatusCodes.Status200OK, await SendAsync(factory, BannedClientIp, "/allowed.png"));
+        Assert.Equal(StatusCodes.Status200OK, await SendAsync(factory, BannedClientIp, "/allowed"));
+        Assert.Equal(StatusCodes.Status200OK, await SendAsync(factory, BannedClientIp, "/allowed"));
+
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendAsync(factory, BannedClientIp, "/allowed.png"));
+        Assert.Equal(StatusCodes.Status200OK, await SendAsync(factory, OtherClientIp, "/allowed"));
+    }
+
+    [Fact]
     public async Task FailsToStartWithInvalidSettings()
     {
         await using var factory = CreateFactory(ClientBanMode.Enforce, threshold: 0);
@@ -58,7 +75,7 @@ public class ClientBanTests : IAsyncLifetime
         Assert.Throws<OptionsValidationException>(() => factory.Server);
     }
 
-    private WebApplicationFactory<Program> CreateFactory(ClientBanMode mode, int threshold = 2)
+    private WebApplicationFactory<Program> CreateFactory(ClientBanMode mode, int threshold = 2, Dictionary<string, string?>? extraSettings = null)
     {
         var settings = new Dictionary<string, string?>
         {
@@ -66,6 +83,10 @@ public class ClientBanTests : IAsyncLifetime
             ["Firewall:ClientBan:Mode"] = mode.ToString(),
             ["Firewall:ClientBan:Threshold"] = threshold.ToString(),
         };
+        foreach (var (key, value) in extraSettings ?? [])
+        {
+            settings[key] = value;
+        }
 
         return BuzzardFactory.Create(_backend.Address, settings, services =>
         {

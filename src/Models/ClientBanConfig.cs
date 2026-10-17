@@ -20,4 +20,16 @@ public class ClientBanConfig
     public int GlobalSafetyThreshold { get; set; } = 10;
     public int GlobalSafetyWindowSeconds { get; set; } = 60;
     public string[] ExemptNetworks { get; set; } = [];
+    public ClientBanRequestCountConfig RequestCount { get; set; } = new();
+}
+
+public class ClientBanRequestCountConfig
+{
+    public static readonly string[] DefaultMethods = ["GET", "HEAD"];
+    public static readonly string[] DefaultExtensions = [""];
+
+    public bool Enabled { get; set; }
+    public string[]? Methods { get; set; }
+    public string[]? Extensions { get; set; }
+    public string[] ExcludedQueryKeys { get; set; } = [];
 }

@@ -14,6 +14,9 @@ public class ClientBanMiddleware
     private readonly ClientBanConfig _config;
     private readonly HashSet<int> _countedStatusCodes;
     private readonly List<IPNetwork> _exemptNetworks;
+    private readonly HashSet<string> _countedMethods;
+    private readonly HashSet<string> _countedExtensions;
+    private readonly string[] _excludedQueryKeys;
 
     public ClientBanMiddleware(
         RequestDelegate next,
@@ -27,6 +30,13 @@ public class ClientBanMiddleware
         _config = config.Value;
         _countedStatusCodes = [.. _config.CountedStatusCodes ?? ClientBanConfig.DefaultCountedStatusCodes];
         _exemptNetworks = _config.ExemptNetworks.Select(ParseNetwork).ToList();
+        _countedMethods = new HashSet<string>(
+            _config.RequestCount.Methods ?? ClientBanRequestCountConfig.DefaultMethods,
+            StringComparer.OrdinalIgnoreCase);
+        _countedExtensions = new HashSet<string>(
+            (_config.RequestCount.Extensions ?? ClientBanRequestCountConfig.DefaultExtensions).Select(NormalizeExtension),
+            StringComparer.OrdinalIgnoreCase);
+        _excludedQueryKeys = _config.RequestCount.ExcludedQueryKeys;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -51,6 +61,11 @@ public class ClientBanMiddleware
             return;
         }
 
+        if (IsCountedRequest(context.Request))
+        {
+            _store.RecordRequest(clientIp, context.Request.Path.Value ?? "");
+        }
+
         await _next(context);
 
         // Forwarding failures are caused by the destination, not the client.
@@ -61,6 +76,27 @@ public class ClientBanMiddleware
 
         _store.RecordError(clientIp, context.Request.Path.Value ?? "");
     }
+
+    private bool IsCountedRequest(HttpRequest request)
+    {
+        if (!_config.RequestCount.Enabled
+            || !_countedMethods.Contains(request.Method)
+            || _excludedQueryKeys.Any(request.Query.ContainsKey))
+        {
+            return false;
+        }
+
+        if (_countedExtensions.Count == 0)
+        {
+            return true;
+        }
+
+        var path = request.Path.Value ?? "";
+        return _countedExtensions.Contains(Path.GetExtension(path[(path.LastIndexOf('/') + 1)..]));
+    }
+
+    private static string NormalizeExtension(string extension) =>
+        extension.Length == 0 || extension.StartsWith('.') ? extension : $".{extension}";
 
     private static IPNetwork ParseNetwork(string value)
     {

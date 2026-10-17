@@ -165,6 +165,137 @@ public class ClientBanMiddlewareTests
         Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware, "198.51.100.20"));
     }
 
+    [Fact]
+    public async Task RequestCount_IsDisabledByDefault()
+    {
+        var middleware = CreateMiddleware();
+        await SendRequestsAsync(middleware, 3, "/articles/a/");
+
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware));
+    }
+
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/articles/a")]
+    [InlineData("/articles/a/")]
+    [InlineData("/articles/a.b/")]
+    public async Task ExtensionlessRequests_ReachingThreshold_Ban(string path)
+    {
+        var middleware = CreateMiddleware(EnableRequestCount);
+        await SendRequestsAsync(middleware, 3, path);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware));
+    }
+
+    [Theory]
+    [InlineData("/thumb.png")]
+    [InlineData("/_next/static/chunks/a.js")]
+    [InlineData("/feeds/index.xml")]
+    public async Task RequestsWithExtension_AreNotCounted(string path)
+    {
+        var middleware = CreateMiddleware(EnableRequestCount);
+        await SendRequestsAsync(middleware, 3, path);
+
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware));
+    }
+
+    [Theory]
+    [InlineData("/index.html", true)]
+    [InlineData("/INDEX.HTML", true)]
+    [InlineData("/articles/a/", true)]
+    [InlineData("/thumb.png", false)]
+    public async Task RequestCount_ExtensionsCanBeConfigured(string path, bool banned)
+    {
+        var middleware = CreateMiddleware(config =>
+        {
+            EnableRequestCount(config);
+            config.RequestCount.Extensions = ["", "html"];
+        });
+        await SendRequestsAsync(middleware, 3, path);
+
+        Assert.Equal(banned ? StatusCodes.Status403Forbidden : StatusCodes.Status200OK, await SendSuccessAsync(middleware, path: "/thumb.png"));
+    }
+
+    [Fact]
+    public async Task RequestCount_EmptyExtensions_CountsAllPaths()
+    {
+        var middleware = CreateMiddleware(config =>
+        {
+            EnableRequestCount(config);
+            config.RequestCount.Extensions = [];
+        });
+        await SendRequestsAsync(middleware, 3, "/thumb.png");
+
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware));
+    }
+
+    [Theory]
+    [InlineData("GET", true)]
+    [InlineData("HEAD", true)]
+    [InlineData("POST", false)]
+    public async Task RequestCount_CountsDefaultMethods(string method, bool banned)
+    {
+        var middleware = CreateMiddleware(EnableRequestCount);
+        await SendRequestsAsync(middleware, 3, "/articles/a/", method);
+
+        Assert.Equal(banned ? StatusCodes.Status403Forbidden : StatusCodes.Status200OK, await SendSuccessAsync(middleware));
+    }
+
+    [Fact]
+    public async Task RequestCount_MethodsCanBeConfigured()
+    {
+        var middleware = CreateMiddleware(config =>
+        {
+            EnableRequestCount(config);
+            config.RequestCount.Methods = ["post"];
+        });
+        await SendRequestsAsync(middleware, 3, "/articles/a/");
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware));
+
+        await SendRequestsAsync(middleware, 3, "/articles/a/", HttpMethods.Post);
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware));
+    }
+
+    [Fact]
+    public async Task RequestCount_CountsRequestsWithQueryByDefault()
+    {
+        var middleware = CreateMiddleware(EnableRequestCount);
+        await SendRequestsAsync(middleware, 3, "/articles/a/", query: "?_rsc=abc");
+
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware));
+    }
+
+    [Fact]
+    public async Task RequestCount_ExcludedQueryKeysCanBeConfigured()
+    {
+        var middleware = CreateMiddleware(config =>
+        {
+            EnableRequestCount(config);
+            config.RequestCount.ExcludedQueryKeys = ["preview"];
+        });
+        await SendRequestsAsync(middleware, 3, "/articles/a/", query: "?preview=1");
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware));
+
+        await SendRequestsAsync(middleware, 3, "/articles/a/", query: "?_rsc=abc");
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware));
+    }
+
+    [Fact]
+    public async Task ErrorsAndRequests_AreCountedSeparately()
+    {
+        var middleware = CreateMiddleware(EnableRequestCount);
+        _respond = context => context.Response.StatusCode = StatusCodes.Status404NotFound;
+        await SendErrorsAsync(middleware, 2, path: "/missing.png");
+        await SendRequestsAsync(middleware, 2, "/articles/a/");
+
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware, path: "/thumb.png"));
+    }
+
+    private static void EnableRequestCount(ClientBanConfig config)
+    {
+        config.RequestCount.Enabled = true;
+    }
+
     private ClientBanMiddleware CreateMiddleware(Action<ClientBanConfig>? configure = null)
     {
         var config = new ClientBanConfig
@@ -188,26 +319,36 @@ public class ClientBanMiddlewareTests
         return new ClientBanMiddleware(next, NullLogger<ClientBanMiddleware>.Instance, store, options);
     }
 
-    private static async Task SendErrorsAsync(ClientBanMiddleware middleware, int count, string remoteIp = ClientIp)
+    private static async Task SendErrorsAsync(ClientBanMiddleware middleware, int count, string remoteIp = ClientIp, string path = "/test")
     {
         for (var i = 0; i < count; i++)
         {
-            await SendAsync(middleware, remoteIp);
+            await SendAsync(middleware, remoteIp, path);
         }
     }
 
-    private async Task<int> SendSuccessAsync(ClientBanMiddleware middleware, string remoteIp = ClientIp)
+    private async Task SendRequestsAsync(ClientBanMiddleware middleware, int count, string path, string method = "GET", string query = "")
     {
         _respond = context => context.Response.StatusCode = StatusCodes.Status200OK;
-        return await SendAsync(middleware, remoteIp);
+        for (var i = 0; i < count; i++)
+        {
+            await SendAsync(middleware, ClientIp, path, method, query);
+        }
     }
 
-    private static async Task<int> SendAsync(ClientBanMiddleware middleware, string remoteIp)
+    private async Task<int> SendSuccessAsync(ClientBanMiddleware middleware, string remoteIp = ClientIp, string path = "/test")
+    {
+        _respond = context => context.Response.StatusCode = StatusCodes.Status200OK;
+        return await SendAsync(middleware, remoteIp, path);
+    }
+
+    private static async Task<int> SendAsync(ClientBanMiddleware middleware, string remoteIp, string path, string method = "GET", string query = "")
     {
         var context = new DefaultHttpContext();
         context.Connection.RemoteIpAddress = IPAddress.Parse(remoteIp);
-        context.Request.Method = HttpMethods.Get;
-        context.Request.Path = "/test";
+        context.Request.Method = method;
+        context.Request.Path = path;
+        context.Request.QueryString = new QueryString(query);
         await middleware.InvokeAsync(context);
         return context.Response.StatusCode;
     }

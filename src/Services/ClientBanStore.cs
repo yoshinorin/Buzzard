@@ -67,6 +67,16 @@ public class ClientBanStore : IClientBanStore
 
     public void RecordError(string clientIp, string path)
     {
+        Record(clientIp, path, entry => entry.Errors, "errors");
+    }
+
+    public void RecordRequest(string clientIp, string path)
+    {
+        Record(clientIp, path, entry => entry.Requests, "requests");
+    }
+
+    private void Record(string clientIp, string path, Func<ClientEntry, Queue<DateTimeOffset>> selectCounter, string countType)
+    {
         lock (_lock)
         {
             var now = _timeProvider.GetUtcNow();
@@ -88,16 +98,17 @@ public class ClientBanStore : IClientBanStore
                 return;
             }
 
+            var counter = selectCounter(entry);
             entry.LastSeen = now;
-            entry.Errors.Enqueue(now);
+            counter.Enqueue(now);
             entry.RecentPaths.Enqueue(path.Length <= MaxPathLength ? path : path[..MaxPathLength]);
             if (entry.RecentPaths.Count > MaxRecentPaths)
             {
                 entry.RecentPaths.Dequeue();
             }
-            entry.RemoveErrorsBefore(now - _window);
+            entry.RemoveCountsBefore(now - _window);
 
-            if (entry.Errors.Count < _config.Threshold)
+            if (counter.Count < _config.Threshold)
             {
                 return;
             }
@@ -111,9 +122,10 @@ public class ClientBanStore : IClientBanStore
 
             entry.BannedUntil = now + _banDuration;
             _logger.LogWarning(
-                "Client ban started ({Mode}): {Ip} {ErrorCount} errors in {WindowSeconds}s, banned until {BannedUntil}, recent paths: {RecentPaths}",
-                _config.Mode, clientIp, entry.Errors.Count, _config.WindowSeconds, entry.BannedUntil, string.Join(", ", entry.RecentPaths));
+                "Client ban started ({Mode}): {Ip} {Count} {CountType} in {WindowSeconds}s, banned until {BannedUntil}, recent paths: {RecentPaths}",
+                _config.Mode, clientIp, counter.Count, countType, _config.WindowSeconds, entry.BannedUntil, string.Join(", ", entry.RecentPaths));
             entry.Errors.Clear();
+            entry.Requests.Clear();
         }
     }
 
@@ -128,8 +140,8 @@ public class ClientBanStore : IClientBanStore
         foreach (var (clientIp, entry) in _clients.ToList())
         {
             ExpireBanIfDue(clientIp, entry, now);
-            entry.RemoveErrorsBefore(now - _window);
-            if (entry.BannedUntil is null && entry.Errors.Count == 0)
+            entry.RemoveCountsBefore(now - _window);
+            if (entry.BannedUntil is null && entry.Errors.Count == 0 && entry.Requests.Count == 0)
             {
                 _clients.Remove(clientIp);
             }
@@ -204,6 +216,7 @@ public class ClientBanStore : IClientBanStore
     private sealed class ClientEntry
     {
         public Queue<DateTimeOffset> Errors { get; } = new();
+        public Queue<DateTimeOffset> Requests { get; } = new();
         public Queue<string> RecentPaths { get; } = new();
         public DateTimeOffset LastSeen { get; set; }
         public DateTimeOffset? BannedUntil { get; set; }
@@ -211,11 +224,17 @@ public class ClientBanStore : IClientBanStore
 
         public bool IsBanned(DateTimeOffset now) => BannedUntil > now;
 
-        public void RemoveErrorsBefore(DateTimeOffset threshold)
+        public void RemoveCountsBefore(DateTimeOffset threshold)
         {
-            while (Errors.TryPeek(out var oldest) && oldest <= threshold)
+            RemoveBefore(Errors, threshold);
+            RemoveBefore(Requests, threshold);
+        }
+
+        private static void RemoveBefore(Queue<DateTimeOffset> counter, DateTimeOffset threshold)
+        {
+            while (counter.TryPeek(out var oldest) && oldest <= threshold)
             {
-                Errors.Dequeue();
+                counter.Dequeue();
             }
         }
     }

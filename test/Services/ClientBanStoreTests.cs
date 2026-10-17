@@ -52,6 +52,21 @@ public class ClientBanStoreTests
     }
 
     [Fact]
+    public void Cleanup_RemovesClientsWithoutRequestsInWindow()
+    {
+        var store = CreateStore();
+        store.RecordRequest("203.0.113.1", "/test");
+
+        _timeProvider.Advance(TimeSpan.FromSeconds(9));
+        store.IsBanned("198.51.100.20");
+        Assert.Equal(1, store.TrackedClientCount);
+
+        _timeProvider.Advance(TimeSpan.FromSeconds(1));
+        store.IsBanned("198.51.100.20");
+        Assert.Equal(0, store.TrackedClientCount);
+    }
+
+    [Fact]
     public void Cleanup_RemovesClientsWithExpiredBans()
     {
         var store = CreateStore();
@@ -84,6 +99,36 @@ public class ClientBanStoreTests
                 LogLevel.Information,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((state, _) => state.ToString() == "Client ban expired (Enforce): 203.0.113.1 2 requests during the ban"),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData(false, "3 errors in 10s")]
+    [InlineData(true, "3 requests in 10s")]
+    public void BanStart_LogsCountType(bool recordRequests, string expected)
+    {
+        var logger = new Mock<ILogger<ClientBanStore>>();
+        logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        var store = CreateStore(logger: logger.Object);
+        for (var i = 0; i < 3; i++)
+        {
+            if (recordRequests)
+            {
+                store.RecordRequest("203.0.113.1", "/test");
+            }
+            else
+            {
+                store.RecordError("203.0.113.1", "/test");
+            }
+        }
+
+        logger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.StartsWith($"Client ban started (Enforce): 203.0.113.1 {expected},")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);

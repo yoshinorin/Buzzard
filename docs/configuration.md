@@ -141,6 +141,8 @@ Configure firewall rules to allow/deny requests:
 
 Temporarily blocks clients that receive many error responses (e.g. scanners probing for files). Only error responses are counted, so pages with many assets do not affect legitimate users.
 
+Optionally, it also blocks clients that send many page requests (e.g. crawlers fetching every article). See `RequestCount` below.
+
 ```json
 "Firewall": {
   "ClientBan": {
@@ -152,7 +154,13 @@ Temporarily blocks clients that receive many error responses (e.g. scanners prob
     "MaxTrackedClients": 10000,
     "GlobalSafetyThreshold": 10,
     "GlobalSafetyWindowSeconds": 60,
-    "ExemptNetworks": ["192.0.2.0/24", "198.51.100.1"]
+    "ExemptNetworks": ["192.0.2.0/24", "198.51.100.1"],
+    "RequestCount": {
+      "Enabled": false,
+      "Methods": ["GET", "HEAD"],
+      "Extensions": [""],
+      "ExcludedQueryKeys": ["_rsc"]
+    }
   }
 }
 ```
@@ -167,6 +175,11 @@ Configuration options:
 - `MaxTrackedClients`: Maximum number of tracked clients (default: `10000`). When exceeded, the least recently seen client that is not banned is discarded.
 - `GlobalSafetyThreshold` / `GlobalSafetyWindowSeconds`: When more than `GlobalSafetyThreshold` clients exceed `Threshold` within `GlobalSafetyWindowSeconds` (defaults: `10` / `60`), Buzzard assumes an outage (e.g. the destination returning 404 for every page) rather than an attack and stops new bans until the count falls back. Existing bans are kept.
 - `ExemptNetworks`: IP addresses or networks in CIDR notation that are never banned (e.g. monitoring services).
+- `RequestCount`: Counts requests matching the conditions below, separately from errors. A client is banned when either count reaches `Threshold` within `WindowSeconds`. `BanSeconds`, `ExemptNetworks`, `Mode` and the safety mechanism are shared with error counting.
+  - `Enabled`: Enables request counting (default: `false`).
+  - `Methods`: HTTP methods to count, case-insensitive (default: `["GET", "HEAD"]`).
+  - `Extensions`: File extensions of the last path segment to count, case-insensitive (default: `[""]`). `""` means no extension, so by default `/articles/a/`, `/articles/a` and `/` are counted while `/thumb.png` and `/feeds/index.xml` are not, and pages with many images do not affect legitimate users. A path ending with `/` is treated as having no extension. The leading `.` is optional (`"html"` and `".html"` are the same). Set `[]` to count requests regardless of extension.
+  - `ExcludedQueryKeys`: Requests that have any of these query keys are not counted, case-insensitive (default: `[]`). For example, `["_rsc"]` excludes Next.js prefetch and client-side navigation requests.
 
 Numeric options must be greater than `0`, otherwise Buzzard fails to start.
 
@@ -181,7 +194,7 @@ Logs:
 
 | Level | Event |
 |-------|-------|
-| `Warning` | A client is banned (or would be banned in `Observe` mode), with the error count and recent paths |
+| `Warning` | A client is banned (or would be banned in `Observe` mode), with the error or request count and recent paths |
 | `Information` | A ban expires, with the number of requests received during the ban |
 | `Debug` | A request is blocked by a ban |
 | `Warning` | The safety mechanism is activated or deactivated |
