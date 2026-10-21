@@ -35,8 +35,7 @@ public class FirewallMiddlewareTests
             _mockLogger.Object,
             _mockPathValidator.Object,
             _mockUserAgentValidator.Object,
-            new QueryStringMasker(new RequestLoggingConfig()),
-            new HeaderMasker(new RequestLoggingConfig()));
+            new RequestLogScope(new QueryStringMasker(new RequestLoggingConfig()), new HeaderMasker(new RequestLoggingConfig())));
     }
 
     [Fact]

@@ -12,6 +12,7 @@ public class ClientBanMiddleware
     private readonly ILogger<ClientBanMiddleware> _logger;
     private readonly IClientBanStore _store;
     private readonly ClientBanConfig _config;
+    private readonly RequestLogScope _requestLogScope;
     private readonly HashSet<int> _countedStatusCodes;
     private readonly List<IPNetwork> _exemptNetworks;
     private readonly HashSet<string> _countedMethods;
@@ -22,12 +23,14 @@ public class ClientBanMiddleware
         RequestDelegate next,
         ILogger<ClientBanMiddleware> logger,
         IClientBanStore store,
-        IOptions<ClientBanConfig> config)
+        IOptions<ClientBanConfig> config,
+        RequestLogScope requestLogScope)
     {
         _next = next;
         _logger = logger;
         _store = store;
         _config = config.Value;
+        _requestLogScope = requestLogScope;
         _countedStatusCodes = [.. _config.CountedStatusCodes ?? ClientBanConfig.DefaultCountedStatusCodes];
         _exemptNetworks = _config.ExemptNetworks.Select(ParseNetwork).ToList();
         _countedMethods = new HashSet<string>(
@@ -56,7 +59,13 @@ public class ClientBanMiddleware
         var clientIp = ip.ToString();
         if (_store.IsBanned(clientIp) && _config.Mode == ClientBanMode.Enforce)
         {
-            _logger.LogDebug("Request blocked by ClientBan: {Ip} {Method} {Path}", clientIp, context.Request.Method, context.Request.Path.Value);
+            var request = context.Extract();
+            using (_requestLogScope.Begin(_logger, context, request, ("Rule", "ClientBan")))
+            {
+                _logger.LogWarning(
+                    "Request blocked by ClientBan: {Ip} {Method} {Path} {UserAgent}",
+                    clientIp, request.Method, RequestLogScope.Truncate(request.Path), RequestLogScope.Truncate(request.UserAgent));
+            }
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             return;
         }

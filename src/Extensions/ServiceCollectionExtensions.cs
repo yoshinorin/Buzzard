@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(requestLoggingConfig);
         services.AddSingleton<QueryStringMasker>();
         services.AddSingleton<HeaderMasker>();
+        services.AddSingleton<RequestLogScope>();
 
         return services;
     }

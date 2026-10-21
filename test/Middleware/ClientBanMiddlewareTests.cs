@@ -3,9 +3,11 @@ using Buzzard.Middleware;
 using Buzzard.Models;
 using Buzzard.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
+using Moq;
 using Yarp.ReverseProxy.Forwarder;
 
 namespace Buzzard.Tests;
@@ -281,6 +283,34 @@ public class ClientBanMiddlewareTests
     }
 
     [Fact]
+    public async Task BannedRequest_LogsWarningWithRule()
+    {
+        var logger = new Mock<ILogger<ClientBanMiddleware>>();
+        logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        var scopes = new List<Dictionary<string, object?>>();
+        logger
+            .Setup(x => x.BeginScope(It.IsAny<Dictionary<string, object?>>()))
+            .Callback<Dictionary<string, object?>>(scopes.Add)
+            .Returns(Mock.Of<IDisposable>());
+        var middleware = CreateMiddleware(logger: logger.Object);
+        await SendErrorsAsync(middleware, 3);
+
+        await SendAsync(middleware, ClientIp, "/blocked", query: "?token=secret");
+
+        logger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state != null && state.ToString() == $"Request blocked by ClientBan: {ClientIp} GET /blocked "),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once());
+        var scope = Assert.Single(scopes);
+        Assert.Equal("ClientBan", scope["Rule"]);
+        Assert.Equal("?token=***", scope["QueryString"]);
+    }
+
+    [Fact]
     public async Task ErrorsAndRequests_AreCountedSeparately()
     {
         var middleware = CreateMiddleware(EnableRequestCount);
@@ -296,7 +326,7 @@ public class ClientBanMiddlewareTests
         config.RequestCount.Enabled = true;
     }
 
-    private ClientBanMiddleware CreateMiddleware(Action<ClientBanConfig>? configure = null)
+    private ClientBanMiddleware CreateMiddleware(Action<ClientBanConfig>? configure = null, ILogger<ClientBanMiddleware>? logger = null)
     {
         var config = new ClientBanConfig
         {
@@ -316,7 +346,8 @@ public class ClientBanMiddlewareTests
             _respond(context);
             return Task.CompletedTask;
         };
-        return new ClientBanMiddleware(next, NullLogger<ClientBanMiddleware>.Instance, store, options);
+        var requestLogScope = new RequestLogScope(new QueryStringMasker(new RequestLoggingConfig()), new HeaderMasker(new RequestLoggingConfig()));
+        return new ClientBanMiddleware(next, logger ?? NullLogger<ClientBanMiddleware>.Instance, store, options, requestLogScope);
     }
 
     private static async Task SendErrorsAsync(ClientBanMiddleware middleware, int count, string remoteIp = ClientIp, string path = "/test")

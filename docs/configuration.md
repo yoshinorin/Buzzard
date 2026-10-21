@@ -196,7 +196,7 @@ Logs:
 |-------|-------|
 | `Warning` | A client is banned (or would be banned in `Observe` mode), with the error or request count and recent paths |
 | `Information` | A ban expires, with the number of requests received during the ban |
-| `Debug` | A request is blocked by a ban |
+| `Warning` | A request is blocked by a ban, with the same fields as request logs and `Rule` set to `ClientBan` |
 | `Warning` | The safety mechanism is activated or deactivated |
 
 Expired bans are processed while handling requests, so the expiry log may be delayed until the next request.
