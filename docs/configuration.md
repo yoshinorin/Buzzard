@@ -157,6 +157,7 @@ Optionally, it also blocks clients that send many page requests (e.g. crawlers f
     "ExemptNetworks": ["192.0.2.0/24", "198.51.100.1"],
     "IPv4Prefix": 32,
     "IPv6Prefix": 64,
+    "PathRuleWeight": 1,
     "RequestCount": {
       "Enabled": false,
       "Methods": ["GET", "HEAD"],
@@ -178,6 +179,7 @@ Configuration options:
 - `GlobalSafetyThreshold` / `GlobalSafetyWindowSeconds`: When more than `GlobalSafetyThreshold` clients exceed `Threshold` within `GlobalSafetyWindowSeconds` (defaults: `10` / `60`), Buzzard assumes an outage (e.g. the destination returning 404 for every page) rather than an attack and stops new bans until the count falls back. Existing bans are kept.
 - `ExemptNetworks`: IP addresses or networks in CIDR notation that are never banned (e.g. monitoring services).
 - `IPv4Prefix` / `IPv6Prefix`: Prefix length used to group clients (defaults: `32` / `64`). Errors and requests are counted, and bans are applied, per network of this size. An IPv6 `/64` is usually assigned to a single subscriber or device, so the default prevents evading bans by rotating addresses within it. Grouping IPv4 (e.g. `24`) is not recommended because it often includes unrelated users behind ISPs or carrier-grade NAT. Set `32` / `128` to track individual addresses. IPv4-mapped IPv6 addresses use `IPv4Prefix`. Must be `1`-`32` / `1`-`128`.
+- `PathRuleWeight`: Number of errors counted for a request blocked by a `Firewall:Path` rule (default: `1`). Set it to `Threshold` or more to ban a client on the first match (e.g. `/.env`, `/wp-login.php`). Requests blocked by `Firewall:UserAgent` rules are counted as `1`. It applies only when `403` is included in `CountedStatusCodes`.
 - `RequestCount`: Counts requests matching the conditions below, separately from errors. A client is banned when either count reaches `Threshold` within `WindowSeconds`. `BanSeconds`, `ExemptNetworks`, `Mode` and the safety mechanism are shared with error counting.
   - `Enabled`: Enables request counting (default: `false`).
   - `Methods`: HTTP methods to count, case-insensitive (default: `["GET", "HEAD"]`).

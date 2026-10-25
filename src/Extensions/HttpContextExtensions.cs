@@ -5,6 +5,18 @@ namespace Buzzard.Extensions;
 
 public static class HttpContextExtensions
 {
+    private static readonly object BlockedByPathRuleKey = new();
+
+    public static void MarkBlockedByPathRule(this HttpContext context)
+    {
+        context.Items[BlockedByPathRuleKey] = true;
+    }
+
+    public static bool IsBlockedByPathRule(this HttpContext context)
+    {
+        return context.Items.ContainsKey(BlockedByPathRuleKey);
+    }
+
     // Forwarded headers are resolved into RemoteIpAddress by ForwardedHeadersMiddleware only when sent from trusted proxies.
     public static IPAddress GetClientIpAddress(this HttpContext context)
     {

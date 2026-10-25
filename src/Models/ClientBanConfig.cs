@@ -22,6 +22,7 @@ public class ClientBanConfig
     public string[] ExemptNetworks { get; set; } = [];
     public int IPv4Prefix { get; set; } = 32;
     public int IPv6Prefix { get; set; } = 64;
+    public int PathRuleWeight { get; set; } = 1;
     public ClientBanRequestCountConfig RequestCount { get; set; } = new();
 }
 

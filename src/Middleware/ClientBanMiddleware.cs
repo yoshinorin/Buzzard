@@ -85,7 +85,8 @@ public class ClientBanMiddleware
             return;
         }
 
-        _store.RecordError(clientKey, context.Request.Path.Value ?? "");
+        var weight = context.IsBlockedByPathRule() ? _config.PathRuleWeight : 1;
+        _store.RecordError(clientKey, context.Request.Path.Value ?? "", weight);
     }
 
     private string ToClientKey(IPAddress ip)

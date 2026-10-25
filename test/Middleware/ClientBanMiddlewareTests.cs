@@ -1,4 +1,5 @@
 using System.Net;
+using Buzzard.Extensions;
 using Buzzard.Middleware;
 using Buzzard.Models;
 using Buzzard.Services;
@@ -92,6 +93,25 @@ public class ClientBanMiddlewareTests
         _respond = context => context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         await SendErrorsAsync(middleware, 3);
         Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware));
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public async Task PathRuleWeight_AppliesOnlyToPathRuleBlocks(bool blockedByPathRule, bool banned)
+    {
+        var middleware = CreateMiddleware(config => config.PathRuleWeight = 3);
+        _respond = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            if (blockedByPathRule)
+            {
+                context.MarkBlockedByPathRule();
+            }
+        };
+        await SendErrorsAsync(middleware, 1);
+
+        Assert.Equal(banned ? StatusCodes.Status403Forbidden : StatusCodes.Status200OK, await SendSuccessAsync(middleware));
     }
 
     [Fact]

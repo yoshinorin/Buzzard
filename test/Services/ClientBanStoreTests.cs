@@ -134,6 +134,18 @@ public class ClientBanStoreTests
             Times.Once);
     }
 
+    [Theory]
+    [InlineData(2, false)]
+    [InlineData(3, true)]
+    [InlineData(100, true)]
+    public void RecordError_CountsWeight(int weight, bool banned)
+    {
+        var store = CreateStore();
+        store.RecordError("203.0.113.1", "/test", weight);
+
+        Assert.Equal(banned, store.IsBanned("203.0.113.1"));
+    }
+
     private ClientBanStore CreateStore(Action<ClientBanConfig>? configure = null, ILogger<ClientBanStore>? logger = null)
     {
         var config = new ClientBanConfig

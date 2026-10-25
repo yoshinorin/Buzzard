@@ -18,7 +18,8 @@ public static class ClientBanExtensions
                     && config.BanSeconds > 0
                     && config.MaxTrackedClients > 0
                     && config.GlobalSafetyThreshold > 0
-                    && config.GlobalSafetyWindowSeconds > 0,
+                    && config.GlobalSafetyWindowSeconds > 0
+                    && config.PathRuleWeight > 0,
                 "Firewall:ClientBan numeric settings must be greater than 0.")
             .Validate(
                 config => config.IPv4Prefix is > 0 and <= 32 && config.IPv6Prefix is > 0 and <= 128,

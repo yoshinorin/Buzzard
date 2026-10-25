@@ -65,17 +65,17 @@ public class ClientBanStore : IClientBanStore
         }
     }
 
-    public void RecordError(string clientIp, string path)
+    public void RecordError(string clientIp, string path, int weight = 1)
     {
-        Record(clientIp, path, entry => entry.Errors, "errors");
+        Record(clientIp, path, weight, entry => entry.Errors, "errors");
     }
 
     public void RecordRequest(string clientIp, string path)
     {
-        Record(clientIp, path, entry => entry.Requests, "requests");
+        Record(clientIp, path, 1, entry => entry.Requests, "requests");
     }
 
-    private void Record(string clientIp, string path, Func<ClientEntry, Queue<DateTimeOffset>> selectCounter, string countType)
+    private void Record(string clientIp, string path, int weight, Func<ClientEntry, Queue<DateTimeOffset>> selectCounter, string countType)
     {
         lock (_lock)
         {
@@ -100,7 +100,11 @@ public class ClientBanStore : IClientBanStore
 
             var counter = selectCounter(entry);
             entry.LastSeen = now;
-            counter.Enqueue(now);
+            // Weights beyond the threshold have no further effect, so cap them to bound memory usage.
+            for (var i = 0; i < Math.Min(weight, _config.Threshold); i++)
+            {
+                counter.Enqueue(now);
+            }
             entry.RecentPaths.Enqueue(path.Length <= MaxPathLength ? path : path[..MaxPathLength]);
             if (entry.RecentPaths.Count > MaxRecentPaths)
             {

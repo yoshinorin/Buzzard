@@ -75,12 +75,27 @@ public class ClientBanTests : IAsyncLifetime
         Assert.Throws<OptionsValidationException>(() => factory.Server);
     }
 
+    [Fact]
+    public async Task PathRuleWeight_BansOnSinglePathRuleMatch()
+    {
+        await using var factory = CreateFactory(ClientBanMode.Enforce, extraSettings: new()
+        {
+            ["Firewall:ClientBan:PathRuleWeight"] = "2",
+        });
+
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendAsync(factory, BannedClientIp, "/denied"));
+
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendAsync(factory, BannedClientIp, "/allowed"));
+        Assert.Equal(StatusCodes.Status200OK, await SendAsync(factory, OtherClientIp, "/allowed"));
+    }
+
     [Theory]
     [InlineData("IPv4Prefix", "0")]
     [InlineData("IPv4Prefix", "33")]
     [InlineData("IPv6Prefix", "0")]
     [InlineData("IPv6Prefix", "129")]
-    public async Task FailsToStartWithInvalidPrefix(string key, string value)
+    [InlineData("PathRuleWeight", "0")]
+    public async Task FailsToStartWithInvalidSetting(string key, string value)
     {
         await using var factory = CreateFactory(ClientBanMode.Enforce, extraSettings: new()
         {

@@ -42,6 +42,7 @@ public class FirewallMiddleware
             {
                 _logger.LogWarning("Request blocked by Path: {Ip} {Method} {Path} {UserAgent}", ip, method, path, userAgent);
             }
+            context.MarkBlockedByPathRule();
             await RejectAsync(context);
             return;
         }
