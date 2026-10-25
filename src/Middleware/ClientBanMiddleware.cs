@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using Buzzard.Extensions;
 using Buzzard.Models;
 using Buzzard.Services;
@@ -57,7 +58,8 @@ public class ClientBanMiddleware
         }
 
         var clientIp = ip.ToString();
-        if (_store.IsBanned(clientIp) && _config.Mode == ClientBanMode.Enforce)
+        var clientKey = ToClientKey(ip);
+        if (_store.IsBanned(clientKey) && _config.Mode == ClientBanMode.Enforce)
         {
             var request = context.Extract();
             using (_requestLogScope.Begin(_logger, context, request, ("Rule", "ClientBan")))
@@ -72,7 +74,7 @@ public class ClientBanMiddleware
 
         if (IsCountedRequest(context.Request))
         {
-            _store.RecordRequest(clientIp, context.Request.Path.Value ?? "");
+            _store.RecordRequest(clientKey, context.Request.Path.Value ?? "");
         }
 
         await _next(context);
@@ -83,7 +85,24 @@ public class ClientBanMiddleware
             return;
         }
 
-        _store.RecordError(clientIp, context.Request.Path.Value ?? "");
+        _store.RecordError(clientKey, context.Request.Path.Value ?? "");
+    }
+
+    private string ToClientKey(IPAddress ip)
+    {
+        var bytes = ip.GetAddressBytes();
+        var prefix = ip.AddressFamily == AddressFamily.InterNetworkV6 ? _config.IPv6Prefix : _config.IPv4Prefix;
+        if (prefix >= bytes.Length * 8)
+        {
+            return ip.ToString();
+        }
+
+        for (var i = 0; i < bytes.Length; i++)
+        {
+            var bits = Math.Clamp(prefix - i * 8, 0, 8);
+            bytes[i] &= (byte)(0xFF << (8 - bits));
+        }
+        return new IPNetwork(new IPAddress(bytes), prefix).ToString();
     }
 
     private bool IsCountedRequest(HttpRequest request)

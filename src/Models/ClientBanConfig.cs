@@ -20,6 +20,8 @@ public class ClientBanConfig
     public int GlobalSafetyThreshold { get; set; } = 10;
     public int GlobalSafetyWindowSeconds { get; set; } = 60;
     public string[] ExemptNetworks { get; set; } = [];
+    public int IPv4Prefix { get; set; } = 32;
+    public int IPv6Prefix { get; set; } = 64;
     public ClientBanRequestCountConfig RequestCount { get; set; } = new();
 }
 

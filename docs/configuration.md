@@ -155,6 +155,8 @@ Optionally, it also blocks clients that send many page requests (e.g. crawlers f
     "GlobalSafetyThreshold": 10,
     "GlobalSafetyWindowSeconds": 60,
     "ExemptNetworks": ["192.0.2.0/24", "198.51.100.1"],
+    "IPv4Prefix": 32,
+    "IPv6Prefix": 64,
     "RequestCount": {
       "Enabled": false,
       "Methods": ["GET", "HEAD"],
@@ -175,6 +177,7 @@ Configuration options:
 - `MaxTrackedClients`: Maximum number of tracked clients (default: `10000`). When exceeded, the least recently seen client that is not banned is discarded.
 - `GlobalSafetyThreshold` / `GlobalSafetyWindowSeconds`: When more than `GlobalSafetyThreshold` clients exceed `Threshold` within `GlobalSafetyWindowSeconds` (defaults: `10` / `60`), Buzzard assumes an outage (e.g. the destination returning 404 for every page) rather than an attack and stops new bans until the count falls back. Existing bans are kept.
 - `ExemptNetworks`: IP addresses or networks in CIDR notation that are never banned (e.g. monitoring services).
+- `IPv4Prefix` / `IPv6Prefix`: Prefix length used to group clients (defaults: `32` / `64`). Errors and requests are counted, and bans are applied, per network of this size. An IPv6 `/64` is usually assigned to a single subscriber or device, so the default prevents evading bans by rotating addresses within it. Grouping IPv4 (e.g. `24`) is not recommended because it often includes unrelated users behind ISPs or carrier-grade NAT. Set `32` / `128` to track individual addresses. IPv4-mapped IPv6 addresses use `IPv4Prefix`. Must be `1`-`32` / `1`-`128`.
 - `RequestCount`: Counts requests matching the conditions below, separately from errors. A client is banned when either count reaches `Threshold` within `WindowSeconds`. `BanSeconds`, `ExemptNetworks`, `Mode` and the safety mechanism are shared with error counting.
   - `Enabled`: Enables request counting (default: `false`).
   - `Methods`: HTTP methods to count, case-insensitive (default: `["GET", "HEAD"]`).
@@ -194,7 +197,7 @@ Logs:
 
 | Level | Event |
 |-------|-------|
-| `Warning` | A client is banned (or would be banned in `Observe` mode), with the error or request count and recent paths |
+| `Warning` | A client is banned (or would be banned in `Observe` mode), with the error or request count and recent paths. The client is shown as a network (e.g. `2001:db8::/64`) when grouped by `IPv4Prefix` / `IPv6Prefix` |
 | `Information` | A ban expires, with the number of requests received during the ban |
 | `Warning` | A request is blocked by a ban, with the same fields as request logs and `Rule` set to `ClientBan` |
 | `Warning` | The safety mechanism is activated or deactivated |

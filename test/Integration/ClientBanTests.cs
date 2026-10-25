@@ -75,6 +75,21 @@ public class ClientBanTests : IAsyncLifetime
         Assert.Throws<OptionsValidationException>(() => factory.Server);
     }
 
+    [Theory]
+    [InlineData("IPv4Prefix", "0")]
+    [InlineData("IPv4Prefix", "33")]
+    [InlineData("IPv6Prefix", "0")]
+    [InlineData("IPv6Prefix", "129")]
+    public async Task FailsToStartWithInvalidPrefix(string key, string value)
+    {
+        await using var factory = CreateFactory(ClientBanMode.Enforce, extraSettings: new()
+        {
+            [$"Firewall:ClientBan:{key}"] = value,
+        });
+
+        Assert.Throws<OptionsValidationException>(() => factory.Server);
+    }
+
     private WebApplicationFactory<Program> CreateFactory(ClientBanMode mode, int threshold = 2, Dictionary<string, string?>? extraSettings = null)
     {
         var settings = new Dictionary<string, string?>

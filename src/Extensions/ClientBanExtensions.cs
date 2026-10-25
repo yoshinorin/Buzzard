@@ -19,7 +19,10 @@ public static class ClientBanExtensions
                     && config.MaxTrackedClients > 0
                     && config.GlobalSafetyThreshold > 0
                     && config.GlobalSafetyWindowSeconds > 0,
-                "Firewall:ClientBan numeric settings must be greater than 0.");
+                "Firewall:ClientBan numeric settings must be greater than 0.")
+            .Validate(
+                config => config.IPv4Prefix is > 0 and <= 32 && config.IPv6Prefix is > 0 and <= 128,
+                "Firewall:ClientBan:IPv4Prefix must be 1-32 and IPv6Prefix must be 1-128.");
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IClientBanStore, ClientBanStore>();
 

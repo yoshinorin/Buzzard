@@ -167,6 +167,61 @@ public class ClientBanMiddlewareTests
         Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware, "198.51.100.20"));
     }
 
+    [Theory]
+    [InlineData("2001:db8:0:1::2", true)]
+    [InlineData("2001:db8:0:1:ffff:ffff:ffff:ffff", true)]
+    [InlineData("2001:db8:0:2::1", false)]
+    public async Task IPv6_IsBannedPer64ByDefault(string otherIp, bool banned)
+    {
+        var middleware = CreateMiddleware();
+        await SendErrorsAsync(middleware, 3, "2001:db8:0:1::1");
+
+        Assert.Equal(banned ? StatusCodes.Status403Forbidden : StatusCodes.Status200OK, await SendSuccessAsync(middleware, otherIp));
+    }
+
+    [Fact]
+    public async Task IPv6_ErrorsAreCountedPer64()
+    {
+        var middleware = CreateMiddleware();
+        await SendErrorsAsync(middleware, 1, "2001:db8:0:1::1");
+        await SendErrorsAsync(middleware, 1, "2001:db8:0:1::2");
+        await SendErrorsAsync(middleware, 1, "2001:db8:0:1::3");
+
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware, "2001:db8:0:1::4"));
+    }
+
+    [Theory]
+    [InlineData("203.0.113.11", false, 32)]
+    [InlineData("203.0.113.11", true, 24)]
+    [InlineData("203.0.114.10", false, 24)]
+    public async Task IPv4Prefix_CanBeConfigured(string otherIp, bool banned, int prefix)
+    {
+        var middleware = CreateMiddleware(config => config.IPv4Prefix = prefix);
+        await SendErrorsAsync(middleware, 3);
+
+        Assert.Equal(banned ? StatusCodes.Status403Forbidden : StatusCodes.Status200OK, await SendSuccessAsync(middleware, otherIp));
+    }
+
+    [Fact]
+    public async Task IPv6Prefix_128_BansPerAddress()
+    {
+        var middleware = CreateMiddleware(config => config.IPv6Prefix = 128);
+        await SendErrorsAsync(middleware, 3, "2001:db8:0:1::1");
+
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware, "2001:db8:0:1::1"));
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware, "2001:db8:0:1::2"));
+    }
+
+    [Fact]
+    public async Task IPv4MappedIPv6_UsesIPv4Prefix()
+    {
+        var middleware = CreateMiddleware();
+        await SendErrorsAsync(middleware, 3, "::ffff:203.0.113.10");
+
+        Assert.Equal(StatusCodes.Status403Forbidden, await SendSuccessAsync(middleware));
+        Assert.Equal(StatusCodes.Status200OK, await SendSuccessAsync(middleware, "203.0.113.11"));
+    }
+
     [Fact]
     public async Task RequestCount_IsDisabledByDefault()
     {
